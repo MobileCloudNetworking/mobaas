@@ -15,32 +15,34 @@
 
 __author__ = 'andy'
 
-from ServiceBackend import ServiceBackend
 from wsgiref.simple_server import make_server
+from occi.core_model import Kind
+from occi.core_model import Resource
+from ServiceBackend import ServiceBackend
 
 
 class Service():
 
-    # bundle_kind = Kind('http://mobile-cloud-networking.eu/sm#',
-    #               'bundle',
-    #               title='A service orchestrator bundle',
-    #               attributes={'mcn.bundle.location': 'required',
-    #                           },
-    #               related=[Resource.kind],
-    #               actions=[])
-
     def __init__(self, app, srv_types):
-        # implementation to talk with the specific SO via SO manager
-        # this specific implementation is not necessary - iff the SO interface is used
-        # this should be pushed into the SM and hidden from service owner
         self.app = app
         self.backend = ServiceBackend()
         self.srv_type = srv_types
+
+        self.bundle_kind = Kind('http://mobile-cloud-networking.eu/sm#',
+                  'bundle',
+                  title='A service orchestrator bundle',
+                  attributes={'mcn.bundle.location': 'required',
+                              },
+                  related=[Resource.kind],
+                  actions=[])
 
     def register_extension(self, mixin, backend):
         self.app.register_backend(mixin, backend)
 
     def run(self):
+        # register the bundle & backend
+        self.app.register_backend(self.bundle_kind, self.backend)
+        # register the Service & backend
         self.app.register_backend(self.srv_type, self.backend)
 
         #TODO pull this port from a config file

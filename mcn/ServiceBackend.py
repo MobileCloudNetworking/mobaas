@@ -37,8 +37,8 @@ class ServiceBackend(KindBackend, ActionBackend):
     def retrieve(self, entity, extras):
         super(ServiceBackend, self).retrieve(entity, extras)
 
-        #pass service_instance_id here
-        # self.som.getSO()
+        #TODO understand if we need to refresh details from the SO
+        # if so then the retrieve needs to update details!
 
     def update(self, old, new, extras):
         super(ServiceBackend, self).update(old, new, extras)
@@ -58,3 +58,26 @@ class ServiceBackend(KindBackend, ActionBackend):
         if action == 'provision':
             #pass service_instance_id here
             self.som.provision(entity)
+
+# Backend to manage bundles - only admins should have access to this
+class BundleBackend(KindBackend, ActionBackend):
+    def __init__(self):
+        super(BundleBackend, self).__init__()
+
+    def action(self, entity, action, attributes, extras):
+        super(BundleBackend, self).action(entity, action, attributes, extras)
+
+    def delete(self, entity, extras):
+        super(BundleBackend, self).delete(entity, extras)
+
+    def retrieve(self, entity, extras):
+        super(BundleBackend, self).retrieve(entity, extras)
+
+    def replace(self, old, new, extras):
+        super(BundleBackend, self).replace(old, new, extras)
+
+    def create(self, entity, extras):
+        super(BundleBackend, self).create(entity, extras)
+
+    def update(self, old, new, extras):
+        super(BundleBackend, self).update(old, new, extras)

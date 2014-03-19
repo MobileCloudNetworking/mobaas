@@ -20,14 +20,11 @@ import shutil
 import os
 import tempfile
 
-from mcn import SORegistry
-
-
 class SOManager():
 
     def __init__(self):
-        self.so_reg = SORegistry.SORegistry()
         self.uri_app = ""
+        #TODO extract and place in a config file
         self.NBAPI_URL = 'http://localhost:8000'
         self.conn = httplib.HTTPConnection(self.NBAPI_URL)
 
@@ -35,27 +32,28 @@ class SOManager():
         return self
 
     def __exit__(self, type, value, traceback):
+        # clean up connection
         self.conn.close()
 
     def deploy(self, entity):
-        """
-        Make sure app for deploying SO bundle is up!
-        """
-        # make a home for the SO instance
+        # create an app for the new SO instance
         self.uri_app, repo = self.create_app()
 
+        # get the code of the bundle and push it to the git facilities
+        # offered by OpenShift
         dir = self.prep_app(repo)
         self.deploy_app(dir)
 
     def provision(self, entity):
+        # make call to the SO's endpoint to execute the provision command
         pass
 
     def dispose(self, service_instance_id):
-        self.conn.request('DELETE', '')
-        pass
+        #TODO error handling
+        self.conn.request('DELETE', self.NBAPI_URL+self.uri_app, headers={'Content-Type': 'text/occi'})
 
-    def getSO(self, service_instance_id):
-        self.so_reg.get_resource(service_instance_id)
+    # def getSO(self, service_instance_id):
+    #     self.so_reg.get_resource(service_instance_id)
 
     def create_app(self):
         # create an app
@@ -97,7 +95,5 @@ class SOManager():
         return dir
 
     def deploy_app(dir):
-        """
-        Fire it all up!
-        """
+        # push to OpenShift
         os.system(' '.join('cd', dir, '&&', 'git', 'push'))
