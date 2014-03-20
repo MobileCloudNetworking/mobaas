@@ -12,11 +12,11 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+from mcn.sm.so_manager import SOManager
 
 __author__ = 'andy'
 
 from occi.backend import ActionBackend, KindBackend
-from mcn import SOManager
 
 # SO* classes to be extracted elsewhere
 class ServiceBackend(KindBackend, ActionBackend):
@@ -27,7 +27,7 @@ class ServiceBackend(KindBackend, ActionBackend):
     Will also implement: action (from ActionBackend).
     '''
     def __init__(self):
-        self.som = SOManager.SOManager()
+        self.som = SOManager()
 
     def create(self, entity, extras):
         super(ServiceBackend, self).create(entity, extras)

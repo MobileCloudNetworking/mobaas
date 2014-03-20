@@ -1,0 +1,5 @@
+Outputs:
+  SampleOutput:
+    Value:
+      "PGW is at IP s1://10.0.0.1"
+    Description: IP of PGW - will be assigned by heat in future.

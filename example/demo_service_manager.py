@@ -12,16 +12,39 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+from mcn.sm.service import Service
 
 __author__ = 'andy'
 
+from occi.backend import MixinBackend
 from occi.core_model import Kind as Type
 from occi.core_model import Mixin as SLA
 from occi.core_model import Resource
 from occi.wsgi import Application
 
-from mcn.Service import Service
-from epc_sla_backend import EpcSLABackend
+
+# IGNORE THIS
+# Ideally this dummy SLA backend will be generic based on the WP5 work
+class EpcSLABackend(MixinBackend):
+
+    def __init__(self):
+        super(EpcSLABackend, self).__init__()
+
+    def delete(self, entity, extras):
+        super(EpcSLABackend, self).delete(entity, extras)
+
+    def retrieve(self, entity, extras):
+        super(EpcSLABackend, self).retrieve(entity, extras)
+
+    def replace(self, old, new, extras):
+        super(EpcSLABackend, self).replace(old, new, extras)
+
+    def create(self, entity, extras):
+        super(EpcSLABackend, self).create(entity, extras)
+
+    def update(self, old, new, extras):
+        super(EpcSLABackend, self).update(old, new, extras)
+
 
 if __name__ == '__main__':
 
@@ -42,10 +65,11 @@ if __name__ == '__main__':
     srv = Service(Application(), epc_svc_type)
 
     #Add some example extensions. These are OCCI Mixins with a backend
-    dummy_be = EpcSLABackend()
-    srv.register_extension(SLA('http://schemas.mobile-cloud-networking.eu/occi/sla#', 'bronze'), dummy_be)
-    srv.register_extension(SLA('http://schemas.mobile-cloud-networking.eu/occi/sla#', 'silver'), dummy_be)
-    srv.register_extension(SLA('http://schemas.mobile-cloud-networking.eu/occi/sla#', 'gold'), dummy_be)
+    dummy_sla_backend = EpcSLABackend()
+    srv.register_extension(SLA('http://schemas.mobile-cloud-networking.eu/occi/sla#', 'bronze'), dummy_sla_backend)
+    srv.register_extension(SLA('http://schemas.mobile-cloud-networking.eu/occi/sla#', 'silver'), dummy_sla_backend)
+    srv.register_extension(SLA('http://schemas.mobile-cloud-networking.eu/occi/sla#', 'gold'), dummy_sla_backend)
 
     # Run the service manager
     srv.run()
+

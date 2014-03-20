@@ -1,0 +1,106 @@
+#!/usr/bin/python
+
+#   Copyright (c) 2013-2015, Intel Performance Learning Solutions Ltd, Intel Corporation.
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
+
+import os
+
+virtenv = os.environ['OPENSHIFT_PYTHON_DIR'] + '/virtenv/'
+virtualenv = os.path.join(virtenv, 'bin/activate_this.py')
+try:
+    execfile(virtualenv, dict(__file__=virtualenv))
+except IOError:
+    pass
+#
+# IMPORTANT: Put any additional includes below this line.  If placed above this
+# line, it's possible required libraries won't be in your searchable path
+#
+
+from sdk.mcn import deployment, util
+
+import os
+import so
+
+
+class Application:
+    """
+    # TODO: replace with OCCI wsgi app.
+    """
+
+    def __init__(self):
+        self.so = None
+
+    def __call__(self, environ, start_response):
+        ctype = 'text/plain'
+
+        if environ['PATH_INFO'] == '/action=init' \
+                and environ['REQUEST_METHOD'] == 'POST':
+            token = environ['HTTP_AUTH_TOKEN']
+            self.so = so.ServiceOrchstrator(token)
+            response_body = "OK"
+
+        elif environ['PATH_INFO'] == '/action=deploy' \
+                and environ['REQUEST_METHOD'] == 'POST':
+            if self.so is None:
+                response_body = 'Please initialize SO with token first.'
+            else:
+                self.so.so_e.deploy()
+                response_body = 'Stack id: ' + str(self.so.so_e.stack_id)
+
+        elif environ['PATH_INFO'] == '/action=dispose' \
+                and environ['REQUEST_METHOD'] == 'POST':
+            if self.so is None:
+                response_body = 'Please initialize SO with token first.'
+            else:
+                self.so.so_e.dispose()
+                response_body = "OK"
+
+        elif environ['PATH_INFO'] == '/state':
+            if self.so is None:
+                response_body = repr(environ)
+            else:
+                response_body = self.so.so_e.state()
+
+        else:
+            if self.so is None:
+                response_body = 'Please initialize SO with token first.'
+            else:
+                ctype = 'text/html'
+                response_body = "<a href=\"/state\">Show State</a><hr />"
+                response_body += "<form action=\"/action=deploy\" " \
+                                 "method=\"post\">" \
+                                 "<input type=\"submit\" value=\"Deploy\">" \
+                                 "</form>"
+                response_body += "<form action=\"/action=dispose\" " \
+                                 "method=\"post\">" \
+                                 "<input type=\"submit\" value=\"Dispose\">" \
+                                 "</form>"
+
+        status = '200 OK'
+        response_headers = [('Content-Type', ctype), ('Content-Length',
+                                                      str(len(response_body)))]
+        start_response(status, response_headers)
+        return [response_body]
+
+application = Application()
+
+#
+# Below for testing only
+#
+if __name__ == '__main__':
+    from wsgiref.simple_server import make_server
+    httpd = make_server('localhost', 8051, application)
+    # Wait for a single request, serve it and quit.
+    httpd.serve_forever()
