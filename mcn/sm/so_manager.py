@@ -108,7 +108,7 @@ class SOManager():
         - the bundle is not managed by git
         """
 
-        #XXX  assues that git is installed
+        #XXX assumes that git is installed
         if repo.startswith('git'):
             # create temp dir...and clone the remote repo provided by OpS
             dir = tempfile.mkdtemp()
