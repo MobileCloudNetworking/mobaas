@@ -16,11 +16,11 @@ The example uses and extends this library
 All configuration of the service manager is carried out through `etc/sm.cfg`. There are three sections to this
 configuration file.
 
- * general - this configuration is used by the code under the namespace of mcn.sm.
+ * `general` - this configuration is used by the code under the namespace of mcn.sm.
    * `port`: the port number on which the service manager listens
- * service_manager - this is configuration related to the service manager that you implement
+ * `service_manager` - this is configuration related to the service manager that you implement
    * `bundle_location`: this is where your service orchestrator bundle is located. Currently **only** file path locations are supported
- * cloud_controller
+ * `cloud_controller`
    * `nb_api`: The URL to the North-bound API of the [CloudController](https://git.mobile-cloud-networking.eu/cloudcontroller/mcn_cc_api)
 
 ## Usage
