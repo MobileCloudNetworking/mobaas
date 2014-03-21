@@ -49,7 +49,7 @@ class EpcSLABackend(MixinBackend):
 if __name__ == '__main__':
 
     # defines the service to offer the service owner defines this
-    epc_svc_type = Type('http://mobile-cloud-networking.eu/occi/sm#',
+    epc_svc_type = Type('http://schemas.mobile-cloud-networking.eu/occi/sm#',
                   'epc',
                   title='This is an example service type - EPC',
                   attributes={'mcn.endpoint.enodeb':    'immutable',

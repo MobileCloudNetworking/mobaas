@@ -24,7 +24,7 @@ from mcn.sm import CONFIG
 
 NBAPI_URL = CONFIG.get('cloud_controller', 'nb_api')
 
-headers={'Content-Type': 'text/occi',
+create_app_headers={'Content-Type': 'text/occi',
             'Category': 'app; scheme="http://schemas.ogf.org/occi/platform#", '
             'python-2.7; scheme="http://schemas.openshift.com/template/app#", '
             'medium; scheme="http://schemas.openshift.com/template/app#"',
@@ -45,11 +45,11 @@ class SOManager():
 
     def deploy(self, entity):
         # create an app for the new SO instance
-        self.uri_app, repo = self.create_app(entity)
+        self.uri_app, repo_uri = self.create_app(entity)
 
         # get the code of the bundle and push it to the git facilities
         # offered by OpenShift
-        self.deploy_app(repo)
+        self.deploy_app(repo_uri)
 
     def provision(self, entity):
         # make call to the SO's endpoint to execute the provision command
@@ -78,24 +78,24 @@ class SOManager():
                 SLA == gold, size of gear should be large
         '''
 
-        headers['X-OCCI-Attribute'] = 'occi.app.name=' + entity['id']
-        self.conn.request('POST', '/app', headers=headers)
+        create_app_headers['X-OCCI-Attribute'] = 'occi.app.name=' + entity['id']
+        self.conn.request('POST', '/app', headers=create_app_headers)
         resp = self.conn.getresponse()
         #TODO error handling
-        uri_app = resp.getheader('Location')
+        app_uri_frag = resp.getheader('Location')
 
         # get git uri
-        self.conn.request('GET', uri_app, headers={'Accept: text/occi'})
+        self.conn.request('GET', app_uri_frag, headers={'Accept: text/occi'})
         resp = self.conn.getresponse()
         attrs = resp.getheader('X-OCCI-Attribute')
-        repo = ''
+        repo_uri = ''
         for attr in attrs.split(', '):
             if attr.find('occi.app.url') != -1:
-                repo = attr.split('=')[1]
+                repo_uri = attr.split('=')[1]
             else:
                 print('Oooops - no occi.app.url found!')
 
-        return uri_app, repo
+        return app_uri_frag, repo_uri
 
     def deploy_app(self, repo):
         """

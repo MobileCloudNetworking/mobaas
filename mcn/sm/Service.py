@@ -28,23 +28,11 @@ class Service():
         self.service_backend = ServiceBackend()
         self.srv_type = srv_types
 
-        #TODO do we actually want this? <- unlikely
-        # self.bundle_kind = Kind('http://schemas.mobile-cloud-networking.eu/occi/so#',
-        #           'bundle',
-        #           title='A service orchestrator bundle',
-        #           attributes={'mcn.bundle.location': 'required',
-        #                       },
-        #           related=[Resource.kind],
-        #           actions=[])
-        # self.bundle_backend = BundleBackend()
-
     def register_extension(self, mixin, backend):
         self.app.register_backend(mixin, backend)
 
     def run(self):
         #TODO require integration with AAA here
-        # register the bundle & backend
-        # self.app.register_backend(self.bundle_kind, self.bundle_backend)
         # register the Service & backend
         self.app.register_backend(self.srv_type, self.service_backend)
 
