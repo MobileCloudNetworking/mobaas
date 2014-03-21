@@ -116,11 +116,15 @@ class SOManager():
             os.system(' '.join('git', 'clone', repo, dir))
 
                 # Get the SO bundle
-            shutil.copytree(CONFIG.get('service_manager', 'bundle_location'), dir)
+            bundle_loc = CONFIG.get('service_manager', 'bundle_location')
+            shutil.copytree(bundle_loc, dir)
 
             # put OpenShift stuff in place
-            shutil.copyfile('build', os.path.join(dir, '.openshift', 'action_hooks', 'build'))
-            shutil.copyfile('pre_start_python', os.path.join(dir, '.openshift', 'action_hooks', 'pre_start_python'))
+            # build and pre_start_python comes from 'support' directory in bundle
+            # TODO this needs to be improved
+            shutil.copyfile(bundle_loc+'/build', os.path.join(dir, '.openshift', 'action_hooks', 'build'))
+            shutil.copyfile(bundle_loc+'/pre_start_python', os.path.join(dir, '.openshift', 'action_hooks', 'pre_start_python'))
+
             os.system(' '.join(['chmod', '+x', os.path.join(dir, '.openshift', 'action_hooks', '*')]))
 
             # add & push to OpenShift
