@@ -72,7 +72,6 @@ class SOManager():
     def so_details(self, entity):
         pass
 
-
     def create_app(self, entity):
         '''
             create an app
@@ -113,7 +112,7 @@ class SOManager():
         if repo.startswith('git'):
             # create temp dir...and clone the remote repo provided by OpS
             dir = tempfile.mkdtemp()
-            os.system(' '.join('git', 'clone', repo, dir))
+            os.system(' '.join(['git', 'clone', repo, dir]))
 
                 # Get the SO bundle
             bundle_loc = CONFIG.get('service_manager', 'bundle_location')

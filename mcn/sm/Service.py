@@ -23,16 +23,16 @@ from mcn.sm import CONFIG
 
 class Service():
 
-    def __init__(self, app, srv_types):
+    def __init__(self, app, srv_type):
         self.app = app
         self.service_backend = ServiceBackend()
-        self.srv_type = srv_types
+        self.srv_type = srv_type
 
     def register_extension(self, mixin, backend):
         self.app.register_backend(mixin, backend)
 
     def run(self):
-        #TODO require integration with AAA here
+        #TODO require integration with AAA here - could SDK be used? Mefinks so :-)
         # register the Service & backend
         self.app.register_backend(self.srv_type, self.service_backend)
 
