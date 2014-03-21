@@ -31,53 +31,30 @@ class ServiceBackend(KindBackend, ActionBackend):
 
     def create(self, entity, extras):
         super(ServiceBackend, self).create(entity, extras)
-
-        #self.som.deploy(entity)
+        self.som.deploy(entity, extras)
 
     def retrieve(self, entity, extras):
         super(ServiceBackend, self).retrieve(entity, extras)
-
         #TODO understand if we need to refresh details from the SO
         # if so then the retrieve needs to update details!
 
     def update(self, old, new, extras):
         super(ServiceBackend, self).update(old, new, extras)
+        #TODO
+        raise NotImplementedError()
 
     def replace(self, old, new, extras):
         super(ServiceBackend, self).replace(old, new, extras)
-        #changes to the service need done here via SO of instance
+        #TODO
+        raise NotImplementedError()
 
     def delete(self, entity, extras):
         super(ServiceBackend, self).delete(entity, extras)
-        #pass service_instance_id
-        self.som.dispose()
+        self.som.dispose(entity, extras)
 
     def action(self, entity, action, attributes, extras):
         super(ServiceBackend, self).action(entity, action, attributes, extras)
 
         if action == 'provision':
             #pass service_instance_id here
-            self.som.provision(entity)
-
-# Backend to manage bundles - only admins should have access to this
-class BundleBackend(KindBackend, ActionBackend):
-    def __init__(self):
-        super(BundleBackend, self).__init__()
-
-    def action(self, entity, action, attributes, extras):
-        super(BundleBackend, self).action(entity, action, attributes, extras)
-
-    def delete(self, entity, extras):
-        super(BundleBackend, self).delete(entity, extras)
-
-    def retrieve(self, entity, extras):
-        super(BundleBackend, self).retrieve(entity, extras)
-
-    def replace(self, old, new, extras):
-        super(BundleBackend, self).replace(old, new, extras)
-
-    def create(self, entity, extras):
-        super(BundleBackend, self).create(entity, extras)
-
-    def update(self, old, new, extras):
-        super(BundleBackend, self).update(old, new, extras)
+            self.som.provision(entity, extras)

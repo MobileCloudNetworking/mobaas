@@ -16,9 +16,10 @@
 __author__ = 'andy'
 
 import httplib
-import shutil
 import os
+import shutil
 import tempfile
+from urlparse import urlparse
 
 from mcn.sm import CONFIG
 
@@ -27,14 +28,16 @@ NBAPI_URL = CONFIG.get('cloud_controller', 'nb_api')
 create_app_headers={'Content-Type': 'text/occi',
             'Category': 'app; scheme="http://schemas.ogf.org/occi/platform#", '
             'python-2.7; scheme="http://schemas.openshift.com/template/app#", '
-            'medium; scheme="http://schemas.openshift.com/template/app#"',
+            'small; scheme="http://schemas.openshift.com/template/app#"',
             }
 
 class SOManager():
 
     def __init__(self):
         self.uri_app = ""
-        self.conn = httplib.HTTPConnection(NBAPI_URL)
+        nburl = urlparse(NBAPI_URL)
+        self.conn = httplib.HTTPConnection(host=nburl.hostname, port=nburl.port)
+
 
     def __enter__(self):
         return self
@@ -43,7 +46,7 @@ class SOManager():
         # clean up connection
         self.conn.close()
 
-    def deploy(self, entity):
+    def deploy(self, entity, extras):
         # create an app for the new SO instance
         self.uri_app, repo_uri = self.create_app(entity)
 
@@ -51,7 +54,7 @@ class SOManager():
         # offered by OpenShift
         self.deploy_app(repo_uri)
 
-    def provision(self, entity):
+    def provision(self, entity, extras):
         # make call to the SO's endpoint to execute the provision command
         #TODO error handling
         self.conn.request('POST',
@@ -59,8 +62,9 @@ class SOManager():
                           headers={'Content-Type': 'text/occi',
                                    'Category': 'provision; scheme=""; kind="action"'})
 
-    def dispose(self, entity):
+    def dispose(self, entity, extras):
         #TODO error handling
+        #TODO prob don't need self.uri_app - get it from entity
         self.conn.request('DELETE',
                           self.uri_app,
                           headers={'Content-Type': 'text/occi'})
@@ -78,8 +82,8 @@ class SOManager():
                 SLA == gold, size of gear should be large
         '''
 
-        create_app_headers['X-OCCI-Attribute'] = 'occi.app.name=' + entity['id']
-        self.conn.request('POST', '/app', headers=create_app_headers)
+        create_app_headers['X-OCCI-Attribute'] = 'occi.app.name=' + entity.identifier
+        self.conn.request('POST', '/app/', headers=create_app_headers)
         resp = self.conn.getresponse()
         #TODO error handling
         app_uri_frag = resp.getheader('Location')
@@ -105,8 +109,9 @@ class SOManager():
         - the bundle is not managed by git
         """
 
+        #XXX  assues that git is installed
         if repo.startswith('git'):
-            # create temp dir...and clone the remote repo
+            # create temp dir...and clone the remote repo provided by OpS
             dir = tempfile.mkdtemp()
             os.system(' '.join('git', 'clone', repo, dir))
 
