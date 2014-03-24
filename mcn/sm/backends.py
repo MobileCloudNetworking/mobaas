@@ -12,13 +12,13 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-from mcn.sm.so_manager import SOManager
 
 __author__ = 'andy'
 
 from occi.backend import ActionBackend, KindBackend
 
-# SO* classes to be extracted elsewhere
+from mcn.sm.so_manager import SOManager
+
 class ServiceBackend(KindBackend, ActionBackend):
     '''
     Provides the basic functionality required to CRUD SOs
