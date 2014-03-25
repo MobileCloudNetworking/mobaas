@@ -24,5 +24,5 @@ setup(name='mcn_sm',
       url='http://zhaw.ch',
       license='Apache 2.0',
       packages=['mcn.sm'],
-      requires=['pyssf', 'mox']
+      requires=['pyssf', 'mox', 'pyopenshift']
      )

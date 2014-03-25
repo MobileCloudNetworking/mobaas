@@ -23,6 +23,8 @@ configuration file.
  * `cloud_controller`
    * `nb_api`: The URL to the North-bound API of the [CloudController](https://git.mobile-cloud-networking.eu/cloudcontroller/mcn_cc_api)
 
+This service manager framework assumes that the bundle supplied will be deployed using git.
+
 ## Usage
 
 To see what services are available by the service provider you need to query the service registry.

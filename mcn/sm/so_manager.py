@@ -15,21 +15,24 @@
 
 __author__ = 'andy'
 
-import httplib
+import httplib # TODO replace with requests lib
 import os
 import shutil
 import tempfile
 from urlparse import urlparse
 
 from mcn.sm import CONFIG
+from oshift import Openshift
 
 NBAPI_URL = CONFIG.get('cloud_controller', 'nb_api')
+OPS_URL = CONFIG.get('cloud_controller', 'ops_api')
 
 create_app_headers={'Content-Type': 'text/occi',
             'Category': 'app; scheme="http://schemas.ogf.org/occi/platform#", '
             'python-2.7; scheme="http://schemas.openshift.com/template/app#", '
             'small; scheme="http://schemas.openshift.com/template/app#"',
             }
+
 
 class SOManager():
 
@@ -47,12 +50,14 @@ class SOManager():
         self.conn.close()
 
     def deploy(self, entity, extras):
+        self.ensure_ssh_key()
+
         # create an app for the new SO instance
         self.uri_app, repo_uri = self.create_app(entity)
 
         # get the code of the bundle and push it to the git facilities
         # offered by OpenShift
-        self.deploy_app(repo_uri)
+        # self.deploy_app(repo_uri)
 
     def provision(self, entity, extras):
         # make call to the SO's endpoint to execute the provision command
@@ -110,10 +115,9 @@ class SOManager():
             - the bundle is not managed by git
         """
 
-        # XXX assumes that git is installed AND public key is registered
+        # XXX assumes that git is installed
         # create temp dir...and clone the remote repo provided by OpS
         dir = tempfile.mkdtemp()
-        # XXX this will not work unless the SMs public key is available to the NBAPI
         os.system(' '.join(['git', 'clone', repo, dir]))
 
         # Get the SO bundle
@@ -132,3 +136,19 @@ class SOManager():
         os.system(' '.join(['cd', dir, '&&', 'git', 'add', '-A']))
         os.system(' '.join(['cd', dir, '&&', 'git', 'commit', '-m', '"deployment of SO for tenant X"', '-a']))
         os.system(' '.join(['cd', dir, '&&', 'git', 'push']))
+
+    def ensure_ssh_key(self):
+        # XXX THIS IS A HACK - it goes _inside_ the CC implementation... BAD!!!!
+        #
+        # variables in config file are: ssh_key_location, ops_api
+        #
+
+        ops_url = urlparse(OPS_URL)
+        ops = Openshift(ops_url.hostname, ops_url.username, ops_url.password)
+
+        if len(ops.keys_list()[1]['data']) == 0:
+            # this adds the default key
+            # TODO use the key specified in the config file, if it exists
+            ops.key_add({
+                'name': 'service manager deployment key'
+            })
