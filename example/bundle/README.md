@@ -30,4 +30,6 @@ You can now visit the SO interface at [here](localhost:8051):
     $ curl -X POST localhost:8051/action=deploy
     $ curl -X POST localhost:8051/action=dispose
 
+# SM Notes
 
+You must have a directory `support` with the contents that are present in this demonstrator
