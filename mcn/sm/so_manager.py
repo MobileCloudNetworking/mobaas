@@ -15,6 +15,7 @@
 
 __author__ = 'andy'
 
+from distutils import dir_util
 import httplib # TODO replace with requests lib
 import os
 import shutil
@@ -57,7 +58,7 @@ class SOManager():
 
         # get the code of the bundle and push it to the git facilities
         # offered by OpenShift
-        # self.deploy_app(repo_uri)
+        self.deploy_app(repo_uri)
 
     def provision(self, entity, extras):
         # make call to the SO's endpoint to execute the provision command
@@ -68,11 +69,11 @@ class SOManager():
                                    'Category': 'provision; scheme=""; kind="action"'})
 
     def dispose(self, entity, extras):
-        #TODO error handling
-        #TODO prob don't need self.uri_app - get it from entity
-        self.conn.request('DELETE',
+        #XXX prob don't need self.uri_app - get it from entity
+        resp = self.conn.request('DELETE',
                           self.uri_app,
                           headers={'Content-Type': 'text/occi'})
+        #TODO error handling
 
     def so_details(self, entity):
         pass
@@ -89,6 +90,7 @@ class SOManager():
         #TODO - check sting, ALPHANUM only
         # re.match('[a-zA-Z0-9_]', MYSTR)
         create_app_headers['X-OCCI-Attribute'] = 'occi.app.name=' + 'CHANGEME'
+        #TODO requests should be placed on a queue
         self.conn.request('POST', '/app/', headers=create_app_headers)
         resp = self.conn.getresponse()
         #TODO error handling
@@ -118,24 +120,26 @@ class SOManager():
         # XXX assumes that git is installed
         # create temp dir...and clone the remote repo provided by OpS
         dir = tempfile.mkdtemp()
-        os.system(' '.join(['git', 'clone', repo, dir]))
+        # os.system(' '.join(['git', 'clone', repo, dir]))
 
         # Get the SO bundle
         bundle_loc = CONFIG.get('service_manager', 'bundle_location')
-        shutil.copytree(bundle_loc, dir)
+        dir_util.copy_tree(bundle_loc, dir)
 
         # put OpenShift stuff in place
         # build and pre_start_python comes from 'support' directory in bundle
         # TODO this needs to be improved - could use from mako.template import Template?
-        shutil.copyfile(bundle_loc+'/support/build', os.path.join(dir, '.openshift', 'action_hooks', 'build'))
-        shutil.copyfile(bundle_loc+'/support/pre_start_python', os.path.join(dir, '.openshift', 'action_hooks', 'pre_start_python'))
+        # shutil.copyfile(bundle_loc+'/support/build', os.path.join(dir, '.openshift', 'action_hooks', 'build'))
+        # shutil.copyfile(bundle_loc+'/support/pre_start_python', os.path.join(dir, '.openshift', 'action_hooks', 'pre_start_python'))
 
-        os.system(' '.join(['chmod', '+x', os.path.join(dir, '.openshift', 'action_hooks', '*')]))
+        # os.system(' '.join(['chmod', '+x', os.path.join(dir, '.openshift', 'action_hooks', '*')]))
 
         # add & push to OpenShift
-        os.system(' '.join(['cd', dir, '&&', 'git', 'add', '-A']))
-        os.system(' '.join(['cd', dir, '&&', 'git', 'commit', '-m', '"deployment of SO for tenant X"', '-a']))
-        os.system(' '.join(['cd', dir, '&&', 'git', 'push']))
+        #os.system(' '.join(['cd', dir, '&&', 'git', 'add', '-A']))
+        #os.system(' '.join(['cd', dir, '&&', 'git', 'commit', '-m', '"deployment of SO for tenant X"', '-a']))
+        #os.system(' '.join(['cd', dir, '&&', 'git', 'push']))
+
+        shutil.rmtree(dir)
 
     def ensure_ssh_key(self):
         # XXX THIS IS A HACK - it goes _inside_ the CC implementation... BAD!!!!
@@ -150,5 +154,5 @@ class SOManager():
             # this adds the default key
             # TODO use the key specified in the config file, if it exists
             ops.key_add({
-                'name': 'service manager deployment key'
+                'name': 'ServiceManager'
             })
