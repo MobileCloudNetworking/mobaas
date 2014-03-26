@@ -25,6 +25,13 @@ configuration file.
 
 This service manager framework assumes that the bundle supplied will be deployed using git.
 
+### Cavaets
+
+ * Make sure that for the user running the SM process that the following line appears in `~/.ssh/config`
+
+        StrictHostKeyChecking no
+
+
 ## Usage
 
 To see what services are available by the service provider you need to query the service registry.

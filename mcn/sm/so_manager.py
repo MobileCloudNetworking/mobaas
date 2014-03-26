@@ -54,15 +54,21 @@ class SOManager():
         self.ensure_ssh_key()
 
         # create an app for the new SO instance
-        self.uri_app, repo_uri = self.create_app(entity)
+        self.uri_app, repo_uri = self.create_app(entity, extras)
 
         # get the code of the bundle and push it to the git facilities
         # offered by OpenShift
         self.deploy_app(repo_uri)
 
+        # XXX Provision is done without any control by the client...
+        # otherwise we won't be able to hand back a working service!
+        self.provision(entity, extras)
+
     def provision(self, entity, extras):
         # make call to the SO's endpoint to execute the provision command
         #TODO error handling
+        #TODO this call is incorrect
+        #TODO pass the tenant ID so heat template can be provisioned
         self.conn.request('POST',
                           self.uri_app+"?action=provision",
                           headers={'Content-Type': 'text/occi',
@@ -75,10 +81,10 @@ class SOManager():
                           headers={'Content-Type': 'text/occi'})
         #TODO error handling
 
-    def so_details(self, entity):
+    def so_details(self, entity, extras):
         pass
 
-    def create_app(self, entity):
+    def create_app(self, entity, extras):
         '''
             create an app
             how if:
@@ -120,7 +126,7 @@ class SOManager():
         # XXX assumes that git is installed
         # create temp dir...and clone the remote repo provided by OpS
         dir = tempfile.mkdtemp()
-        # os.system(' '.join(['git', 'clone', repo, dir]))
+        os.system(' '.join(['git', 'clone', repo, dir]))
 
         # Get the SO bundle
         bundle_loc = CONFIG.get('service_manager', 'bundle_location')
@@ -129,15 +135,15 @@ class SOManager():
         # put OpenShift stuff in place
         # build and pre_start_python comes from 'support' directory in bundle
         # TODO this needs to be improved - could use from mako.template import Template?
-        # shutil.copyfile(bundle_loc+'/support/build', os.path.join(dir, '.openshift', 'action_hooks', 'build'))
-        # shutil.copyfile(bundle_loc+'/support/pre_start_python', os.path.join(dir, '.openshift', 'action_hooks', 'pre_start_python'))
+        shutil.copyfile(bundle_loc+'/support/build', os.path.join(dir, '.openshift', 'action_hooks', 'build'))
+        shutil.copyfile(bundle_loc+'/support/pre_start_python', os.path.join(dir, '.openshift', 'action_hooks', 'pre_start_python'))
 
-        # os.system(' '.join(['chmod', '+x', os.path.join(dir, '.openshift', 'action_hooks', '*')]))
+        os.system(' '.join(['chmod', '+x', os.path.join(dir, '.openshift', 'action_hooks', '*')]))
 
         # add & push to OpenShift
-        #os.system(' '.join(['cd', dir, '&&', 'git', 'add', '-A']))
-        #os.system(' '.join(['cd', dir, '&&', 'git', 'commit', '-m', '"deployment of SO for tenant X"', '-a']))
-        #os.system(' '.join(['cd', dir, '&&', 'git', 'push']))
+        os.system(' '.join(['cd', dir, '&&', 'git', 'add', '-A']))
+        os.system(' '.join(['cd', dir, '&&', 'git', 'commit', '-m', '"deployment of SO for tenant X"', '-a']))
+        os.system(' '.join(['cd', dir, '&&', 'git', 'push']))
 
         shutil.rmtree(dir)
 
