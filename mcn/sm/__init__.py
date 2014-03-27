@@ -16,6 +16,17 @@
 __author__ = 'andy'
 
 import ConfigParser
+import logging
+
 
 CONFIG = ConfigParser.ConfigParser()
 CONFIG.read('../etc/sm.cfg')
+
+def config_logger(log_level=logging.DEBUG):
+    # create formatter
+    # formatter = logging.Formatter("%(levelname)s [%(asctime)s] %(message)s", "%H:%M:%S")
+    logger = logging.getLogger("dump_logs")
+    logger.setLevel(log_level)
+    return logger
+
+LOG = config_logger()

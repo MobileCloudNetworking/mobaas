@@ -9,7 +9,7 @@ You can run this example by `python ./example/demo_service_manager.py`
 
 The SM library is under mcn/sm
 
-The example uses and extends this library
+The example service manager (`example/demo_service_manager.py`) uses and extends this library.
 
 ## Configuration
 
@@ -22,15 +22,27 @@ configuration file.
    * `bundle_location`: this is where your service orchestrator bundle is located. Currently **only** file path locations are supported
  * `cloud_controller`
    * `nb_api`: The URL to the North-bound API of the [CloudController](https://git.mobile-cloud-networking.eu/cloudcontroller/mcn_cc_api)
+   * `ops_api`: The URL to the OpenShift instance running behind the NBAPI. This is currently **ONLY** a work around and will be removed in the future.
 
 This service manager framework assumes that the bundle supplied will be deployed using git.
+
+### Configuration of demo SO bundle
+
+There are some support files that the SM and the CC rely upon. These support files must be stored under the root of
+your SO bundle in a folder named `support`.
+
+If you wish to run the example you will possibly have to update one of them.
+
+The `support/pre_start_python` file contains a variable that points to the AAA service. For this demo, the URI value of
+`DESIGN_URI` should be set to your OpenStack keystone API e.g. `http://$KEYSTONE_HOST:5000/v2.0`.
+
+There is no further configuration needed for the bundle.
 
 ### Cavaets
 
  * Make sure that for the user running the SM process that the following line appears in `~/.ssh/config`
 
         StrictHostKeyChecking no
-
 
 ## Usage
 

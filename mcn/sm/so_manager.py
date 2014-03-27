@@ -23,6 +23,7 @@ import tempfile
 from urlparse import urlparse
 
 from mcn.sm import CONFIG
+from mcn.sm import LOG
 from oshift import Openshift
 
 NBAPI_URL = CONFIG.get('cloud_controller', 'nb_api')
@@ -40,6 +41,7 @@ class SOManager():
     def __init__(self):
         self.uri_app = ""
         nburl = urlparse(NBAPI_URL)
+        LOG.info('CloudController Northbound API: ' + nburl.hostname + ':' + str(nburl.port))
         self.conn = httplib.HTTPConnection(host=nburl.hostname, port=nburl.port)
 
 
@@ -48,21 +50,25 @@ class SOManager():
 
     def __exit__(self, type, value, traceback):
         # clean up connection
+        LOG.debug('Closing connection to CloudController Northbound API')
         self.conn.close()
 
     def deploy(self, entity, extras):
+        LOG.debug('Ensuring SM SSH Key...')
         self.ensure_ssh_key()
 
         # create an app for the new SO instance
+        LOG.debug('Creating SO container...')
         self.uri_app, repo_uri = self.create_app(entity, extras)
 
         # get the code of the bundle and push it to the git facilities
         # offered by OpenShift
+        LOG.debug('Deploying SO Bundle...')
         self.deploy_app(repo_uri)
 
         # XXX Provision is done without any control by the client...
         # otherwise we won't be able to hand back a working service!
-        self.provision(entity, extras)
+        # self.provision(entity, extras)
 
     def provision(self, entity, extras):
         # make call to the SO's endpoint to execute the provision command
@@ -76,6 +82,7 @@ class SOManager():
 
     def dispose(self, entity, extras):
         #XXX prob don't need self.uri_app - get it from entity
+        LOG.info('Disposing service instance: ' + self.uri_app)
         resp = self.conn.request('DELETE',
                           self.uri_app,
                           headers={'Content-Type': 'text/occi'})
@@ -95,14 +102,15 @@ class SOManager():
 
         #TODO - check sting, ALPHANUM only
         # re.match('[a-zA-Z0-9_]', MYSTR)
-        create_app_headers['X-OCCI-Attribute'] = 'occi.app.name=' + 'CHANGEME'
-        #TODO requests should be placed on a queue
+        create_app_headers['X-OCCI-Attribute'] = 'occi.app.name=serviceinstance'
+        LOG.debug('Requesting container to execute SO Bundle')
+        #TODO requests should be placed on a queue as this is a blocking call
         self.conn.request('POST', '/app/', headers=create_app_headers)
         resp = self.conn.getresponse()
         #TODO error handling
         from urlparse import urlparse
         app_uri_path = urlparse(resp.getheader('Location')).path
-
+        LOG.debug('SO container created: ' + app_uri_path)
         # get git uri
         self.conn.request('GET', app_uri_path, headers={'Accept': 'text/occi'})
         resp = self.conn.getresponse()
@@ -113,6 +121,7 @@ class SOManager():
                 repo_uri = attr.split('=')[1]
                 break
 
+        LOG.debug('SO container repository: ' + repo_uri)
         return app_uri_path, repo_uri
 
     def deploy_app(self, repo):
@@ -126,15 +135,18 @@ class SOManager():
         # XXX assumes that git is installed
         # create temp dir...and clone the remote repo provided by OpS
         dir = tempfile.mkdtemp()
+        LOG.debug('Cloning git repository: ' + repo + ' to: ' + dir)
         os.system(' '.join(['git', 'clone', repo, dir]))
 
         # Get the SO bundle
         bundle_loc = CONFIG.get('service_manager', 'bundle_location')
+        LOG.debug('Bundle to add to repo: ' + bundle_loc)
         dir_util.copy_tree(bundle_loc, dir)
 
         # put OpenShift stuff in place
         # build and pre_start_python comes from 'support' directory in bundle
         # TODO this needs to be improved - could use from mako.template import Template?
+        LOG.debug('Adding OpenShift support files from: ' + bundle_loc + '/support')
         shutil.copyfile(bundle_loc+'/support/build', os.path.join(dir, '.openshift', 'action_hooks', 'build'))
         shutil.copyfile(bundle_loc+'/support/pre_start_python', os.path.join(dir, '.openshift', 'action_hooks', 'pre_start_python'))
 
@@ -143,6 +155,7 @@ class SOManager():
         # add & push to OpenShift
         os.system(' '.join(['cd', dir, '&&', 'git', 'add', '-A']))
         os.system(' '.join(['cd', dir, '&&', 'git', 'commit', '-m', '"deployment of SO for tenant X"', '-a']))
+        LOG.debug('Pushing new code to remote repository...')
         os.system(' '.join(['cd', dir, '&&', 'git', 'push']))
 
         shutil.rmtree(dir)
@@ -152,13 +165,15 @@ class SOManager():
         #
         # variables in config file are: ssh_key_location, ops_api
         #
-
+        LOG.debug('Ensuring valid SM SSH is registered with OpenShift...')
         ops_url = urlparse(OPS_URL)
+        LOG.debug('OpenShift endpoint: ' + ops_url)
         ops = Openshift(ops_url.hostname, ops_url.username, ops_url.password)
 
         if len(ops.keys_list()[1]['data']) == 0:
             # this adds the default key
             # TODO use the key specified in the config file, if it exists
+            LOG.debug('No SM SSH regsitered. Registering default SM SSH key.')
             ops.key_add({
                 'name': 'ServiceManager'
             })

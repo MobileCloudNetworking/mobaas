@@ -19,6 +19,7 @@ from wsgiref.simple_server import make_server
 
 from mcn.sm.backends import ServiceBackend
 from mcn.sm import CONFIG
+from mcn.sm import LOG
 
 
 class Service():
@@ -36,5 +37,6 @@ class Service():
         # register the Service & backend
         self.app.register_backend(self.srv_type, self.service_backend)
 
+        LOG.info('Service Manager running on interfaces, running on port: ' + CONFIG.get('general', 'port'))
         httpd = make_server('', int(CONFIG.get('general', 'port')), self.app)
         httpd.serve_forever()
