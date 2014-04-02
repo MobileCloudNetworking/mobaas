@@ -63,3 +63,19 @@ To dispose of the instance you can issue the following request.
 
     $ curl -v -X DELETE http://localhost:8888/epc/59eb41f9-8cbc-4bbd-bb16-4101703d0e13
 
+## Quickly Getting Started
+
+1. Clone [this project](https://git.mobile-cloud-networking.eu/cloudcontroller/mcn_sm)
+
+2. Add your service type definition. For example:
+
+        epc_svc_type = Type('http://schemas.mobile-cloud-networking.eu/occi/sm#', 
+        'cdn',
+        title='Content distribution network service',
+        attributes={
+                   'mcn.cdn.admin_password': 'mutable',
+                    },
+        related=[Resource.kind],
+        actions=[])
+
+3. Edit the existing SO implementation and make it work for you
