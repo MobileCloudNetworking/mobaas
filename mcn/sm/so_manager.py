@@ -55,16 +55,16 @@ class SOManager():
 
     def deploy(self, entity, extras):
         LOG.debug('Ensuring SM SSH Key...')
-        self.ensure_ssh_key()
+        self.__ensure_ssh_key()
 
         # create an app for the new SO instance
         LOG.debug('Creating SO container...')
-        self.uri_app, repo_uri = self.create_app(entity, extras)
+        self.uri_app, repo_uri = self.__create_app(entity, extras)
 
         # get the code of the bundle and push it to the git facilities
         # offered by OpenShift
         LOG.debug('Deploying SO Bundle...')
-        self.deploy_app(repo_uri)
+        self.__deploy_app(repo_uri)
 
         # XXX Provision is done without any control by the client...
         # otherwise we won't be able to hand back a working service!
@@ -91,7 +91,7 @@ class SOManager():
     def so_details(self, entity, extras):
         pass
 
-    def create_app(self, entity, extras):
+    def __create_app(self, entity, extras):
         '''
             create an app
             how if:
@@ -124,7 +124,7 @@ class SOManager():
         LOG.debug('SO container repository: ' + repo_uri)
         return app_uri_path, repo_uri
 
-    def deploy_app(self, repo):
+    def __deploy_app(self, repo):
         """
             Deploy the local SO bundle
             assumption here
@@ -160,7 +160,7 @@ class SOManager():
 
         shutil.rmtree(dir)
 
-    def ensure_ssh_key(self):
+    def __ensure_ssh_key(self):
         # XXX THIS IS A HACK - it goes _inside_ the CC implementation... BAD!!!!
         #
         # variables in config file are: ssh_key_location, ops_api
