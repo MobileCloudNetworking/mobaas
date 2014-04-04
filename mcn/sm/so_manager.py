@@ -161,10 +161,33 @@ class SOManager():
         shutil.rmtree(dir)
 
     def __ensure_ssh_key(self):
+        # TODO replace with new call to NBAPI
+        # https://jira.mobile-cloud-networking.eu/browse/SM-17
+        # key is an OCCI Kind
         # XXX THIS IS A HACK - it goes _inside_ the CC implementation... BAD!!!!
         #
         # variables in config file are: ssh_key_location, ops_api
+        # KEY_ATTR = {'occi.key.name': '',
+        #             'occi.key.content': 'required'}
         #
+        # KEY_KIND = occi.core_model.Kind('http://schemas.ogf.org/occi/security/'
+        #                                 'credentials#',
+        #                                 'public_key', title='A ssh key.',
+        #                                 attributes=KEY_ATTR,
+        #                                 related=[occi.core_model.Resource.kind])
+        #
+        # self.conn.request('GET', app_uri_path, headers={'Accept': 'text/occi'})
+        # resp = self.conn.getresponse()
+        # attrs = resp.getheader('X-OCCI-Attribute')
+        # repo_uri = ''
+        #
+        # if x:
+        #     create_app_headers['X-OCCI-Attribute'] = 'occi.app.name=serviceinstance'
+        #     LOG.debug('Requesting container to execute SO Bundle')
+        #     #TODO requests should be placed on a queue as this is a blocking call
+        #     self.conn.request('POST', '/app/', headers=create_app_headers)
+        #     resp = self.conn.getresponse()
+
         LOG.debug('Ensuring valid SM SSH is registered with OpenShift...')
         ops_url = urlparse(OPS_URL)
         LOG.debug('OpenShift endpoint: ' + ops_url)
