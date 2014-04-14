@@ -17,9 +17,25 @@ __author__ = 'andy'
 
 from wsgiref.simple_server import make_server
 
+from occi.wsgi import Application
+
 from mcn.sm.backends import ServiceBackend
 from mcn.sm import CONFIG
 from mcn.sm import LOG
+
+
+class MCNApplication(Application):
+    def __init__(self):
+        super(MCNApplication, self).__init__()
+
+    def register_backend(self, category, backend):
+        return super(MCNApplication, self).register_backend(category, backend)
+
+    def __call__(self, environ, response):
+        auth = environ.get('HTTP_AUTH_TOKEN', '')
+        # if auth == '':
+        #     raise Exception('No authentication token supplied. Try again with it!')
+        return super(MCNApplication, self)._call_occi(environ, response, token=auth)
 
 
 class Service():

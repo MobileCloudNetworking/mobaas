@@ -20,7 +20,8 @@ from occi.backend import MixinBackend
 from occi.core_model import Kind as Type
 from occi.core_model import Mixin as SLA
 from occi.core_model import Resource
-from occi.wsgi import Application
+
+from mcn.sm.service import MCNApplication
 
 
 # IGNORE THIS
@@ -62,7 +63,7 @@ if __name__ == '__main__':
                   actions=[])
 
     # Create a service
-    srv = Service(Application(), epc_svc_type)
+    srv = Service(MCNApplication(), epc_svc_type)
 
     #Add some example extensions. These are OCCI Mixins with a backend
     dummy_sla_backend = EpcSLABackend()

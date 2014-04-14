@@ -20,6 +20,7 @@ configuration file.
    * `port`: the port number on which the service manager listens
  * `service_manager` - this is configuration related to the service manager that you implement
    * `bundle_location`: this is where your service orchestrator bundle is located. Currently **only** file path locations are supported
+   * `ssh_key_location`: this is an RSA (DSA is not supported) ssh key that the service manager uses to deploy applications with and authenticate against the target git repository
  * `cloud_controller`
    * `nb_api`: The URL to the North-bound API of the [CloudController](https://git.mobile-cloud-networking.eu/cloudcontroller/mcn_cc_api)
    * `ops_api`: The URL to the OpenShift instance running behind the NBAPI. This is currently **ONLY** a work around and will be removed in the future.

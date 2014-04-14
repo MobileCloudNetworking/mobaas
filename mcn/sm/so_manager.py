@@ -16,77 +16,83 @@
 __author__ = 'andy'
 
 from distutils import dir_util
-import httplib # TODO replace with requests lib
 import os
+import random
 import shutil
 import tempfile
 from urlparse import urlparse
 
 from mcn.sm import CONFIG
 from mcn.sm import LOG
-from oshift import Openshift
-
-NBAPI_URL = CONFIG.get('cloud_controller', 'nb_api')
-OPS_URL = CONFIG.get('cloud_controller', 'ops_api')
-
-create_app_headers={'Content-Type': 'text/occi',
-            'Category': 'app; scheme="http://schemas.ogf.org/occi/platform#", '
-            'python-2.7; scheme="http://schemas.openshift.com/template/app#", '
-            'small; scheme="http://schemas.openshift.com/template/app#"',
-            }
-
+from mcn.sm import timeit, conditional_decorator, DOING_PERFORMANCE_ANALYSIS
+import requests
 
 class SOManager():
 
     def __init__(self):
-        self.uri_app = ""
-        nburl = urlparse(NBAPI_URL)
-        LOG.info('CloudController Northbound API: ' + nburl.hostname + ':' + str(nburl.port))
-        self.conn = httplib.HTTPConnection(host=nburl.hostname, port=nburl.port)
+        self.nburl = CONFIG.get('cloud_controller', 'nb_api')
 
+        #scrub off any trailing slash
+        if self.nburl[-1] == '/':
+            self.nburl = self.nburl[0:-1]
 
-    def __enter__(self):
-        return self
+        LOG.info('CloudController Northbound API: ' + self.nburl)
 
-    def __exit__(self, type, value, traceback):
-        # clean up connection
-        LOG.debug('Closing connection to CloudController Northbound API')
-        self.conn.close()
+        if os.system('which git') != 0:
+            raise EnvironmentError('Git is not available on the system path, or is not installed.')
 
+    @conditional_decorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def deploy(self, entity, extras):
         LOG.debug('Ensuring SM SSH Key...')
         self.__ensure_ssh_key()
 
         # create an app for the new SO instance
         LOG.debug('Creating SO container...')
-        self.uri_app, repo_uri = self.__create_app(entity, extras)
+        repo_uri = self.__create_app(entity, extras)
 
         # get the code of the bundle and push it to the git facilities
         # offered by OpenShift
         LOG.debug('Deploying SO Bundle...')
         self.__deploy_app(repo_uri)
 
-        # XXX Provision is done without any control by the client...
-        # otherwise we won't be able to hand back a working service!
-        # self.provision(entity, extras)
+        host = urlparse(repo_uri).netloc.split('@')[1]
 
-    def provision(self, entity, extras):
+        LOG.debug('Initialising the SO...')
+        self.__init_so(host, entity, extras)
+
+        # Deployment is done without any control by the client...
+        # otherwise we won't be able to hand back a working service!
+        LOG.debug('Deploying the SO bundle...')
+        self.__deploy_so(host, entity, extras)
+
+    def __init_so(self, host, entity, extras):
+        LOG.debug('Initialising SO with: ' + 'http://' + host + "/action=init")
+        r = requests.post('http://' + host + "/action=init", headers={'Auth-Token': extras['token']})
+        r.raise_for_status()
+
+    def __deploy_so(self, host, entity, extras):
         # make call to the SO's endpoint to execute the provision command
-        #TODO error handling
-        #TODO this call is incorrect
-        #TODO pass the tenant ID so heat template can be provisioned
-        self.conn.request('POST',
-                          self.uri_app+"?action=provision",
-                          headers={'Content-Type': 'text/occi',
-                                   'Category': 'provision; scheme=""; kind="action"'})
+        # XXX This call will eventually be an OCCI call
+        LOG.debug('Deploying SO with: ' + 'http://' + host + '/action=deploy')
+        r = requests.post('http://' + host + '/action=deploy', headers={'Auth-Token': extras['token']})
+        r.raise_for_status()
 
     def dispose(self, entity, extras):
-        #XXX prob don't need self.uri_app - get it from entity
-        LOG.info('Disposing service instance: ' + self.uri_app)
-        resp = self.conn.request('DELETE',
-                          self.uri_app,
-                          headers={'Content-Type': 'text/occi'})
-        #TODO error handling
+        # XXX does not call the dispose method of SO
+
+        LOG.info('Disposing service instance: ' + ' FIXME!')
+        host = ''
+        # host = urlparse(repo_uri).netloc.split('@')[1]
+        r = requests.post('http://' + host + '/action=dispose')
+        r.raise_for_status()
+
+        LOG.info('Disposing service orchestrator: ' + ' FIXME!')
+        r = requests.delete(self.nburl + entity.identifier,
+                            headers={'Content-Type': 'text/occi',
+                                     'Auth-Token': extras['token']})
+        r.raise_for_status()
+
+        #TODO query for service instance management endpoints
 
     def so_details(self, entity, extras):
         pass
@@ -100,29 +106,45 @@ class SOManager():
                 SLA == gold, size of gear should be large
         '''
 
-        #TODO - check sting, ALPHANUM only
-        # re.match('[a-zA-Z0-9_]', MYSTR)
-        create_app_headers['X-OCCI-Attribute'] = 'occi.app.name=serviceinstance'
-        LOG.debug('Requesting container to execute SO Bundle')
+        # XXX app name random string is not guaranteed to be unique!
+        create_app_headers = {'Content-Type': 'text/occi',
+            'Category': 'app; scheme="http://schemas.ogf.org/occi/platform#", '
+            'python-2.7; scheme="http://schemas.openshift.com/template/app#", '
+            'small; scheme="http://schemas.openshift.com/template/app#"',
+            'X-OCCI-Attribute': 'occi.app.name=serviceinstance' +
+                                ''.join(random.choice('0123456789ABCDEF') for i in range(16))
+            }
+
+        LOG.debug('Requesting container to execute SO Bundle: ' + self.nburl + '/app/')
         #TODO requests should be placed on a queue as this is a blocking call
-        self.conn.request('POST', '/app/', headers=create_app_headers)
-        resp = self.conn.getresponse()
-        #TODO error handling
-        from urlparse import urlparse
-        app_uri_path = urlparse(resp.getheader('Location')).path
+        r = requests.post(self.nburl + '/app/', headers=create_app_headers)
+        r.raise_for_status()
+
+        loc = r.headers.get('Location', '')
+        if loc == '':
+            raise AttributeError("No occi attributes found in request")
+
+        app_uri_path = urlparse(loc).path
         LOG.debug('SO container created: ' + app_uri_path)
+
         # get git uri
-        self.conn.request('GET', app_uri_path, headers={'Accept': 'text/occi'})
-        resp = self.conn.getresponse()
-        attrs = resp.getheader('X-OCCI-Attribute')
+        r = requests.get(self.nburl + app_uri_path, headers={'Accept': 'text/occi'})
+
+        attrs = r.headers.get('X-OCCI-Attribute','')
+        if attrs == '':
+            raise AttributeError("No occi attributes found in request")
+
         repo_uri = ''
         for attr in attrs.split(', '):
             if attr.find('occi.app.repo') != -1:
-                repo_uri = attr.split('=')[1]
+                repo_uri = attr.split('=')[1][1:-1] # scrubs trailing wrapped quotes
                 break
+        if repo_uri == '':
+            raise AttributeError("No occi.app.repo attribute found in request")
 
         LOG.debug('SO container repository: ' + repo_uri)
-        return app_uri_path, repo_uri
+
+        return repo_uri
 
     def __deploy_app(self, repo):
         """
@@ -132,11 +154,11 @@ class SOManager():
             - the bundle is not managed by git
         """
 
-        # XXX assumes that git is installed
         # create temp dir...and clone the remote repo provided by OpS
         dir = tempfile.mkdtemp()
         LOG.debug('Cloning git repository: ' + repo + ' to: ' + dir)
-        os.system(' '.join(['git', 'clone', repo, dir]))
+        cmd = ' '.join(['git', 'clone', repo, dir])
+        os.system(cmd)
 
         # Get the SO bundle
         bundle_loc = CONFIG.get('service_manager', 'bundle_location')
@@ -145,7 +167,7 @@ class SOManager():
 
         # put OpenShift stuff in place
         # build and pre_start_python comes from 'support' directory in bundle
-        # TODO this needs to be improved - could use from mako.template import Template?
+        # XXX could be improved - e.g. could use from mako.template import Template?
         LOG.debug('Adding OpenShift support files from: ' + bundle_loc + '/support')
         shutil.copyfile(bundle_loc+'/support/build', os.path.join(dir, '.openshift', 'action_hooks', 'build'))
         shutil.copyfile(bundle_loc+'/support/pre_start_python', os.path.join(dir, '.openshift', 'action_hooks', 'pre_start_python'))
@@ -156,47 +178,49 @@ class SOManager():
         os.system(' '.join(['cd', dir, '&&', 'git', 'add', '-A']))
         os.system(' '.join(['cd', dir, '&&', 'git', 'commit', '-m', '"deployment of SO for tenant X"', '-a']))
         LOG.debug('Pushing new code to remote repository...')
+        # XXX the push takes time - place on queue
         os.system(' '.join(['cd', dir, '&&', 'git', 'push']))
 
         shutil.rmtree(dir)
 
     def __ensure_ssh_key(self):
-        # TODO replace with new call to NBAPI
-        # https://jira.mobile-cloud-networking.eu/browse/SM-17
-        # key is an OCCI Kind
-        # XXX THIS IS A HACK - it goes _inside_ the CC implementation... BAD!!!!
-        #
-        # variables in config file are: ssh_key_location, ops_api
-        # KEY_ATTR = {'occi.key.name': '',
-        #             'occi.key.content': 'required'}
-        #
-        # KEY_KIND = occi.core_model.Kind('http://schemas.ogf.org/occi/security/'
-        #                                 'credentials#',
-        #                                 'public_key', title='A ssh key.',
-        #                                 attributes=KEY_ATTR,
-        #                                 related=[occi.core_model.Resource.kind])
-        #
-        # self.conn.request('GET', app_uri_path, headers={'Accept': 'text/occi'})
-        # resp = self.conn.getresponse()
-        # attrs = resp.getheader('X-OCCI-Attribute')
-        # repo_uri = ''
-        #
-        # if x:
-        #     create_app_headers['X-OCCI-Attribute'] = 'occi.app.name=serviceinstance'
-        #     LOG.debug('Requesting container to execute SO Bundle')
-        #     #TODO requests should be placed on a queue as this is a blocking call
-        #     self.conn.request('POST', '/app/', headers=create_app_headers)
-        #     resp = self.conn.getresponse()
 
-        LOG.debug('Ensuring valid SM SSH is registered with OpenShift...')
-        ops_url = urlparse(OPS_URL)
-        LOG.debug('OpenShift endpoint: ' + ops_url)
-        ops = Openshift(ops_url.hostname, ops_url.username, ops_url.password)
+        resp = requests.get(self.nburl + '/public_key/', headers={'Accept': 'text/occi'})
+        resp.raise_for_status()
+        locs = resp.headers.get('x-occi-location', '')
 
-        if len(ops.keys_list()[1]['data']) == 0:
-            # this adds the default key
-            # TODO use the key specified in the config file, if it exists
-            LOG.debug('No SM SSH regsitered. Registering default SM SSH key.')
-            ops.key_add({
-                'name': 'ServiceManager'
-            })
+        if len(locs.split()) < 1:
+            LOG.debug('No SM SSH registered. Registering default SM SSH key.')
+            occi_key_name, occi_key_content = self._extract_public_key()
+
+            create_key_headers = {'Content-Type': 'text/occi',
+                'Category': 'public_key; scheme="http://schemas.ogf.org/occi/security/credentials#"',
+                'X-OCCI-Attribute':'occi.key.name="' + occi_key_name + '", occi.key.content="' + occi_key_content + '"'
+            }
+
+            resp = requests.post(self.nburl + '/public_key/', headers=create_key_headers)
+            resp.raise_for_status()
+        else:
+            LOG.debug('Valid SM SSH is registered with OpenShift.')
+
+    def _extract_public_key(self):
+
+        ssh_key_file = CONFIG.get('service_manager', 'ssh_key_location')
+        LOG.debug('Using SSH key file: ' + ssh_key_file)
+
+        with open(ssh_key_file, 'r') as content_file:
+            content = content_file.read()
+            content = content.split()
+
+            if content[0] == 'ssh-dsa':
+                raise Exception("The supplied key is not a RSA ssh key. Location: " + ssh_key_file)
+
+            key_content = content[1]
+            key_name = 'servicemanager'
+
+            if len(content) == 3:
+                key_name = content[2]
+
+            return key_name, key_content
+
+

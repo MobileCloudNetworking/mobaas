@@ -2,6 +2,6 @@
 
 echo "Downloading MCN SDK"
 
-wget --no-check-certificate "https://owncloud.mobile-cloud-networking.eu/owncloud/public.php?service=files&t=0b30b6031281849d1eaffd27ce92cf08&download" -O $OPENSHIFT_DATA_DIR/sdk.zip 
-pip install $OPENSHIFT_DATA_DIR/sdk.zip
+wget --no-check-certificate "https://owncloud.mobile-cloud-networking.eu/owncloud/public.php?service=files&t=01ad0519e7e4ad9bc8fdbf5f959f183e&download" -O $OPENSHIFT_DATA_DIR/sdk.tar.gz
+pip install $OPENSHIFT_DATA_DIR/sdk.tar.gz
 

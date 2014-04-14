@@ -21,7 +21,7 @@ import threading
 
 from sdk.mcn import util
 
-HERE = os.environ['OPENSHIFT_REPO_DIR']
+HERE = os.environ.get('OPENSHIFT_REPO_DIR', '.')
 
 
 class ServiceOrchstratorExecution(object):
@@ -37,7 +37,7 @@ class ServiceOrchstratorExecution(object):
         f.close()
         self.stack_id = None
         # make sure we can talk to deployer...
-        self.deployer = util.get_deployer(self.token)
+        self.deployer = util.get_deployer(self.token, url_type='public')
 
     def design(self):
         """

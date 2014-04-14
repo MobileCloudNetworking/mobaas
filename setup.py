@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-#   Copyright (c) 2013-2015, Intel Performance Learning Solutions Ltd, Intel Corporation.
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -14,15 +13,15 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from distutils.core import setup
+from setuptools import setup
 
 setup(name='mcn_sm',
       version='0.1',
       description='Library for creating MCN service managers',
-      author='Zuercher Hochschule fuer Angewandte Wissenschaften',
+      author='Andy Edmonds',
       author_email='edmo@zhaw.ch',
-      url='http://zhaw.ch',
+      url='http://cloudcomp.ch',
       license='Apache 2.0',
       packages=['mcn.sm'],
-      requires=['pyssf', 'mox', 'pyopenshift']
+      requires=['pyssf', 'mox', 'requests']
      )

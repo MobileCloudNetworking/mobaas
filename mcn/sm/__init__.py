@@ -17,16 +17,44 @@ __author__ = 'andy'
 
 import ConfigParser
 import logging
+import time
 
+
+DOING_PERFORMANCE_ANALYSIS = True
 
 CONFIG = ConfigParser.ConfigParser()
 CONFIG.read('../etc/sm.cfg')
 
 def config_logger(log_level=logging.DEBUG):
-    # create formatter
-    # formatter = logging.Formatter("%(levelname)s [%(asctime)s] %(message)s", "%H:%M:%S")
-    logger = logging.getLogger("dump_logs")
+    logging.basicConfig(format='%(levelname)s %(asctime)s: %(message)s',
+                        datefmt='%m/%d/%Y %I:%M:%S %p',
+                        log_level=log_level)
+    logger = logging.getLogger(__name__)
     logger.setLevel(log_level)
     return logger
 
 LOG = config_logger()
+
+# helper function for to measure timedelta.
+def timeit(method):
+
+    def timed(*args, **kw):
+        ts = time.time()
+        result = method(*args, **kw)
+        te = time.time()
+
+        LOG.debug("%r (%r, %r) %2.2f sec" % (method.__name__, args, kw, te-ts))
+        return result, te-ts
+
+    return timed
+
+class conditional_decorator(object):
+    def __init__(self, dec, condition):
+        self.decorator = dec
+        self.condition = condition
+
+    def __call__(self, func):
+        if not self.condition:
+            return func
+        else:
+            return self.decorator(func)
