@@ -3,5 +3,3 @@
 echo "Setting environment variable"
 
 export DESIGN_URI='http://160.85.4.224:35357/v2.0'
-
-

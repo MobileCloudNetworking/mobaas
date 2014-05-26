@@ -29,15 +29,16 @@ class ServiceOrchstratorExecution(object):
     Sample SO execution part.
     """
 
-    def __init__(self, token):
+    def __init__(self, token, tenant_name):
         # read template...
         self.token = token
+        self.tenant_name = tenant_name
         f = open(os.path.join(HERE, 'data', 'test.yaml'))
         self.template = f.read()
         f.close()
         self.stack_id = None
         # make sure we can talk to deployer...
-        self.deployer = util.get_deployer(self.token, url_type='public')
+        self.deployer = util.get_deployer(self.token, url_type='public', tenant_name=self.tenant_name)
 
     def design(self):
         """
@@ -102,7 +103,7 @@ class ServiceOrchstrator(object):
     Sample SO.
     """
 
-    def __init__(self, token):
-        self.so_e = ServiceOrchstratorExecution(token)
+    def __init__(self, token, tenant_name):
+        self.so_e = ServiceOrchstratorExecution(token, tenant_name)
         self.so_d = ServiceOrchstratorDecision(self.so_e, token)
         # so_d.start()

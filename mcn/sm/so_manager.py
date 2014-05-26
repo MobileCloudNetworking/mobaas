@@ -67,12 +67,17 @@ class SOManager():
 
     def __init_so(self, host, entity, extras):
         LOG.debug('Initialising SO with: ' + 'http://' + host + "/action=init")
-        r = requests.post('http://' + host + "/action=init", headers={'Auth-Token': extras['token']})
+        # TODO send `entity`'s attributes along with the call to deploy
+        r = requests.post('http://' + host + "/action=init",
+                          headers={
+                              'X-Auth-Token': extras['token'],
+                              'X-Tenant-Name': extras['tenant_name']
+                          }
+                        )
         r.raise_for_status()
 
     def __deploy_so(self, host, entity, extras):
         # make call to the SO's endpoint to execute the provision command
-        # XXX This call will eventually be an OCCI call
         LOG.debug('Deploying SO with: ' + 'http://' + host + '/action=deploy')
         r = requests.post('http://' + host + '/action=deploy', headers={'Auth-Token': extras['token']})
         r.raise_for_status()
@@ -81,6 +86,7 @@ class SOManager():
         # XXX does not call the dispose method of SO
 
         LOG.info('Disposing service instance: ' + ' FIXME!')
+        # host can be taken from: host = urlparse(repo_uri).netloc.split('@')[1]
         host = ''
         # host = urlparse(repo_uri).netloc.split('@')[1]
         r = requests.post('http://' + host + '/action=dispose')
@@ -122,10 +128,12 @@ class SOManager():
 
         loc = r.headers.get('Location', '')
         if loc == '':
-            raise AttributeError("No occi attributes found in request")
+            raise AttributeError("No OCCI Location attribute found in request")
 
         app_uri_path = urlparse(loc).path
         LOG.debug('SO container created: ' + app_uri_path)
+        LOG.debug('Updating OCCI entity.id from: ' + entity.identifier + ' to: ' + app_uri_path)
+        entity.identifier = app_uri_path
 
         # get git uri
         r = requests.get(self.nburl + app_uri_path, headers={'Accept': 'text/occi'})

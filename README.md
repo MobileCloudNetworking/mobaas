@@ -11,6 +11,22 @@ The SM library is under mcn/sm
 
 The example service manager (`example/demo_service_manager.py`) uses and extends this library.
 
+## Authentication
+Authentication and access to the SM is mediated by OpenStack keystone. In order to make a service instantiation request
+against a SM the end user needs to supply:
+
+ * tenant name: this should be provided through the `X-Auth-Token` HTTP header
+ * token: this should be provided through the `X-Tenant-Name` HTTP header. If no `X-Tenant-Name` is supplied the default of `admin` will be used (See [here](https://git.mobile-cloud-networking.eu/cloudcontroller/mcn_cc_sdk/blob/master/sdk/services.py#L86) for why).
+
+### Generating a Keystone Token
+**IMPORTANT:** you're user must be assigned `admin` permissions for the project they're part of.
+
+For this to work you will need the keystone command line tools installed (`pip install python-keystoneclient`) and also your OpenStack credentials.
+
+To create a keystone token issue the following commands:
+
+    $ keystone token-get
+
 ## Configuration
 
 All configuration of the service manager is carried out through `etc/sm.cfg`. There are three sections to this
@@ -23,7 +39,6 @@ configuration file.
    * `ssh_key_location`: this is an RSA (DSA is not supported) ssh key that the service manager uses to deploy applications with and authenticate against the target git repository
  * `cloud_controller`
    * `nb_api`: The URL to the North-bound API of the [CloudController](https://git.mobile-cloud-networking.eu/cloudcontroller/mcn_cc_api)
-   * `ops_api`: The URL to the OpenShift instance running behind the NBAPI. This is currently **ONLY** a work around and will be removed in the future.
 
 This service manager framework assumes that the bundle supplied will be deployed using git.
 
@@ -53,16 +68,16 @@ To see what services are available by the service provider you need to query the
 
 To create an instance of a service offered by the service provider (e.g. using the EPC demo service manager).
 
-    $ curl -v -X POST http://localhost:8888/epc/ -H 'Category: epc; scheme="http://schemas.mobile-cloud-networking.eu/occi/sm#"; class="kind";' -H 'content-type: text/occi'
+    $ curl -v -X POST http://localhost:8888/epc/ -H 'Category: epc; scheme="http://schemas.mobile-cloud-networking.eu/occi/sm#"; class="kind";' -H 'content-type: text/occi' -H 'x-tenant-name: YOUR_TENANT_NAME' -H 'x-auth-token: YOUR_KEYSTONE_TOKEN'
 
 This request, if successful, will return a service instance ID that can be used to request further details about the
 service instance.
 
-    $ curl -v -X GET http://localhost:8888/epc/59eb41f9-8cbc-4bbd-bb16-4101703d0e13
+    $ curl -v -X GET http://localhost:8888/epc/59eb41f9-8cbc-4bbd-bb16-4101703d0e13 -H 'x-tenant-name: YOUR_TENANT_NAME' -H 'x-auth-token: YOUR_KEYSTONE_TOKEN'
 
 To dispose of the instance you can issue the following request.
 
-    $ curl -v -X DELETE http://localhost:8888/epc/59eb41f9-8cbc-4bbd-bb16-4101703d0e13
+    $ curl -v -X DELETE http://localhost:8888/epc/59eb41f9-8cbc-4bbd-bb16-4101703d0e13 -H 'x-tenant-name: YOUR_TENANT_NAME' -H 'x-auth-token: YOUR_KEYSTONE_TOKEN'
 
 ## Quickly Getting Started
 
@@ -79,4 +94,4 @@ To dispose of the instance you can issue the following request.
         related=[Resource.kind],
         actions=[])
 
-3. Edit the existing SO implementation and make it work for you
+3. Edit the existing SO implementation and make it work for you.

@@ -47,8 +47,9 @@ class Application:
 
         if environ['PATH_INFO'] == '/action=init' \
                 and environ['REQUEST_METHOD'] == 'POST':
-            token = environ['HTTP_AUTH_TOKEN']
-            self.so = so.ServiceOrchstrator(token)
+            token = environ.get('HTTP_X_AUTH_TOKEN', '')
+            tenant_name = environ.get('HTTP_X_TENANT_NAME', '')
+            self.so = so.ServiceOrchstrator(token, tenant_name)
             response_body = "OK"
 
         elif environ['PATH_INFO'] == '/action=deploy' \

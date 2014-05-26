@@ -51,7 +51,7 @@ class ServiceBackend(KindBackend, ActionBackend):
     def delete(self, entity, extras):
         super(ServiceBackend, self).delete(entity, extras)
         raise NotImplementedError()
-        self.som.dispose(entity, extras)
+        #self.som.dispose(entity, extras)
 
     # currently not exposed on the kind
     def action(self, entity, action, attributes, extras):

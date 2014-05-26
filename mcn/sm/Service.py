@@ -23,7 +23,6 @@ from mcn.sm.backends import ServiceBackend
 from mcn.sm import CONFIG
 from mcn.sm import LOG
 
-
 class MCNApplication(Application):
     def __init__(self):
         super(MCNApplication, self).__init__()
@@ -32,10 +31,24 @@ class MCNApplication(Application):
         return super(MCNApplication, self).register_backend(category, backend)
 
     def __call__(self, environ, response):
-        auth = environ.get('HTTP_AUTH_TOKEN', '')
+        auth = environ.get('HTTP_X_AUTH_TOKEN', '')
+
+        if auth == '':
+            auth = environ.get('HTTP_AUTH_TOKEN', '')
+            LOG.warn('You have supplied an auth token header using the wrong format. Please use "X-Auth-Token"')
+
+        # TODO validate the token against the AAA using the SDK
         # if auth == '':
         #     raise Exception('No authentication token supplied. Try again with it!')
-        return super(MCNApplication, self)._call_occi(environ, response, token=auth)
+        # X-Tenant-Name
+
+        tenant = environ.get('HTTP_X_TENANT_NAME', '')
+
+        if tenant == '':
+            auth = environ.get('HTTP_TENANT_NAME', '')
+            LOG.warn('You have supplied an auth tenant name header using the wrong format. Please use "X-Tenant-Name"')
+
+        return super(MCNApplication, self)._call_occi(environ, response, token=auth, tenant_name=tenant)
 
 
 class Service():
@@ -49,7 +62,6 @@ class Service():
         self.app.register_backend(mixin, backend)
 
     def run(self):
-        #TODO require integration with AAA here - could SDK be used? Mefinks so :-)
         # register the Service & backend
         self.app.register_backend(self.srv_type, self.service_backend)
 
