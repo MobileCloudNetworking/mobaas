@@ -83,15 +83,25 @@ To dispose of the instance you can issue the following request.
 
 1. Clone [this project](https://git.mobile-cloud-networking.eu/cloudcontroller/mcn_sm)
 
-2. Add your service type definition. For example:
+2. Install the service manager library:
 
-        epc_svc_type = Type('http://schemas.mobile-cloud-networking.eu/occi/sm#', 
-        'cdn',
-        title='Content distribution network service',
+        $ python ./setup.py install
+
+3. Use the example service manager as your starting point (`example/demo_service_manager.py`). Add your service type definition. For example:
+
+        my_svc_type = Type('http://schemas.mobile-cloud-networking.eu/occi/sm#',
+        'mysvc',
+        title='My service',
         attributes={
-                   'mcn.cdn.admin_password': 'mutable',
+                   'mcn.my.admin_password': 'mutable',
                     },
         related=[Resource.kind],
         actions=[])
 
-3. Edit the existing SO implementation and make it work for you.
+4. Take a copy of `etc/sm.cfg` and customise it according to your own service (e.g. setting the path to your SO bundle)
+
+5. Edit the existing SO implementation and make it work for you.
+
+5. Run your service manager. Example using the demo:
+
+        $ python ./demo_service_manager.py -c ../etc/sm.cfg
