@@ -17,13 +17,11 @@ __author__ = 'andy'
 
 import ConfigParser
 import logging
+from optparse import OptionParser
 import time
 
 
 DOING_PERFORMANCE_ANALYSIS = True
-
-CONFIG = ConfigParser.ConfigParser()
-CONFIG.read('../etc/sm.cfg')
 
 def config_logger(log_level=logging.DEBUG):
     logging.basicConfig(format='%(levelname)s %(asctime)s: %(message)s',
@@ -34,6 +32,24 @@ def config_logger(log_level=logging.DEBUG):
     return logger
 
 LOG = config_logger()
+
+parser = OptionParser(usage="Usage: %prog options. See %prog -h for options.")
+
+parser.add_option("-c", "--config",
+                  action="store",
+                  type="string",
+                  dest="config_file_path",
+                  help="Path to the service manager configuration file.")
+
+(options, args) = parser.parse_args()
+
+if not options.config_file_path:
+    parser.error("Wrong number of arguments.")
+
+LOG.info('Using config file: ' + options.config_file_path)
+
+CONFIG = ConfigParser.ConfigParser()
+CONFIG.read(options.config_file_path)
 
 # helper function for to measure timedelta.
 def timeit(method):
