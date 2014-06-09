@@ -2,3 +2,5 @@
 *.pyc
 build/
 dist/
+atlassian-ide-plugin.xml
+
