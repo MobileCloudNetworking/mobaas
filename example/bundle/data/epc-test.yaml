@@ -1,0 +1,31 @@
+heat_template_version: 2013-05-23
+
+resources:
+  my_instance:
+    type: OS::Nova::Server
+    properties:
+      flavor: m1.tiny
+      image: TestVM
+
+# Note that the output parameter names must match those in the Kind definition
+outputs:
+  mcn.endpoint.enodeb:
+    description: IP of enodeb mgt endpoint
+    value:
+      "10.0.0.1"
+  mcn.endpoint.mme:
+    description: IP of MME mgt endpoint
+    value:
+      "10.0.0.1"
+  mcn.endpoint.hss:
+    description: IP of HSS mgt endpoint
+    value:
+      "10.0.0.1"
+  mcn.endpoint.srv-gw:
+    description: IP of SRV-GW mgt endpoint
+    value:
+      "10.0.0.1"
+  mcn.endpoint.pdn-gw:
+    description: IP of PDN-GW mgt endpoint
+    value:
+      "10.0.0.1"
