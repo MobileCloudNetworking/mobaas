@@ -17,9 +17,9 @@
 
 import os
 
-virtenv = os.environ.get('OPENSHIFT_PYTHON_DIR', '.') + '/virtenv/'
-virtualenv = os.path.join(virtenv, 'bin/activate_this.py')
 try:
+    virtenv = os.environ.get('OPENSHIFT_PYTHON_DIR', '.') + '/virtenv/'
+    virtualenv = os.path.join(virtenv, 'bin/activate_this.py')
     execfile(virtualenv, dict(__file__=virtualenv))
 except IOError:
     pass
@@ -30,7 +30,6 @@ except IOError:
 
 from sdk.mcn import deployment, util
 
-import os
 import so
 
 
@@ -50,7 +49,10 @@ class Application:
             token = environ.get('HTTP_X_AUTH_TOKEN', '')
             tenant_name = environ.get('HTTP_X_TENANT_NAME', '')
             self.so = so.ServiceOrchstrator(token, tenant_name)
-            response_body = "OK"
+            if self.so is None:
+                response_body = "Failed to create SO"
+            else:
+                response_body = "OK"
 
         elif environ['PATH_INFO'] == '/action=deploy' \
                 and environ['REQUEST_METHOD'] == 'POST':

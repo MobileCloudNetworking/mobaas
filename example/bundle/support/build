@@ -1,12 +1,12 @@
 #!/bin/bash
 
-echo "Installing PyYAML 3.11"
-https://pypi.python.org/packages/source/P/PyYAML/PyYAML-3.11.tar.gz#md5=f50e08ef0fe55178479d3a618efe21db -O $OPENSHIFT_DATA_DIR/PyYAML-3.11.tar.gz
-pip install $OPENSHIFT_DATA_DIR/PyYAML-3.11.tar.gz
+#echo "Installing PyYAML 3.11"
+#https://pypi.python.org/packages/source/P/PyYAML/PyYAML-3.11.tar.gz#md5=f50e08ef0fe55178479d3a618efe21db -O $OPENSHIFT_DATA_DIR/PyYAML-3.11.tar.gz
+#pip install $OPENSHIFT_DATA_DIR/PyYAML-3.11.tar.gz
 
-echo "Installing prettytable 0.7.2"
-wget --no-check-certificate "https://pypi.python.org/packages/source/P/PrettyTable/prettytable-0.7.2.tar.gz#md5=a6b80afeef286ce66733d54a0296b13b" -O $OPENSHIFT_DATA_DIR/prettytable-0.7.2.tar.gz
-pip install $OPENSHIFT_DATA_DIR/prettytable-0.7.2.tar.gz
+#echo "Installing prettytable 0.7.2"
+#wget --no-check-certificate "https://pypi.python.org/packages/source/P/PrettyTable/prettytable-0.7.2.tar.gz#md5=a6b80afeef286ce66733d54a0296b13b" -O $OPENSHIFT_DATA_DIR/prettytable-0.7.2.tar.gz
+#pip install $OPENSHIFT_DATA_DIR/prettytable-0.7.2.tar.gz
 
 echo "Installing MCN SDK"
 wget --no-check-certificate "https://owncloud.mobile-cloud-networking.eu/owncloud/public.php?service=files&t=01ad0519e7e4ad9bc8fdbf5f959f183e&download" -O $OPENSHIFT_DATA_DIR/sdk.tar.gz

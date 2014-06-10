@@ -33,7 +33,7 @@ class ServiceOrchstratorExecution(object):
         # read template...
         self.token = token
         self.tenant_name = tenant_name
-        f = open(os.path.join(HERE, 'data', 'test.yaml'))
+        f = open(os.path.join(HERE, 'data', 'epc-test.yaml'))
         self.template = f.read()
         f.close()
         self.stack_id = None
