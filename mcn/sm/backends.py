@@ -22,9 +22,6 @@ from mcn.sm.so_manager import SOManager
 class ServiceBackend(KindBackend, ActionBackend):
     '''
     Provides the basic functionality required to CRUD SOs
-
-    Will implement create, retrieve, update, delete, replace
-    Will also implement: action (from ActionBackend).
     '''
     def __init__(self):
         self.som = SOManager()
@@ -35,28 +32,27 @@ class ServiceBackend(KindBackend, ActionBackend):
 
     def retrieve(self, entity, extras):
         super(ServiceBackend, self).retrieve(entity, extras)
-        #TODO understand if we need to refresh details from the SO
-        # if so then the retrieve needs to update details!
+        self.som.so_details(entity, extras)
 
     def update(self, old, new, extras):
-        super(ServiceBackend, self).update(old, new, extras)
-        #TODO
         raise NotImplementedError()
+        #TODO
+        # super(ServiceBackend, self).update(old, new, extras)
 
     def replace(self, old, new, extras):
-        super(ServiceBackend, self).replace(old, new, extras)
-        #TODO
         raise NotImplementedError()
+        #TODO
+        #super(ServiceBackend, self).replace(old, new, extras)
 
     def delete(self, entity, extras):
         super(ServiceBackend, self).delete(entity, extras)
-        raise NotImplementedError()
-        #self.som.dispose(entity, extras)
+        self.som.dispose(entity, extras)
 
     # currently not exposed on the kind
     def action(self, entity, action, attributes, extras):
-        super(ServiceBackend, self).action(entity, action, attributes, extras)
-
-        if action == 'provision':
-            #pass service_instance_id here
-            self.som.provision(entity, extras)
+        raise NotImplementedError()
+        # TODO
+        # super(ServiceBackend, self).action(entity, action, attributes, extras)
+        # if action == 'provision':
+        #     #pass service_instance_id here
+        #     self.som.provision(entity, extras)
