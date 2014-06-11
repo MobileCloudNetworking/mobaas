@@ -18,35 +18,42 @@ __author__ = 'andy'
 from wsgiref.simple_server import make_server
 
 from occi.wsgi import Application
+from occi.registry import NonePersistentRegistry
 
 from mcn.sm.backends import ServiceBackend
 from mcn.sm import CONFIG
 from mcn.sm import LOG
 
+
+class SMRegistry(NonePersistentRegistry):
+
+    def __init__(self):
+        super(SMRegistry, self).__init__()
+
+    def add_resource(self, key, resource, extras):
+        self.resources[resource.identifier] = resource
+
+
 class MCNApplication(Application):
     def __init__(self):
-        super(MCNApplication, self).__init__()
+        super(MCNApplication, self).__init__(registry=SMRegistry())
 
     def register_backend(self, category, backend):
         return super(MCNApplication, self).register_backend(category, backend)
 
     def __call__(self, environ, response):
         auth = environ.get('HTTP_X_AUTH_TOKEN', '')
+        # TODO validate the token against the AAA using the SDK
 
         if auth == '':
-            auth = environ.get('HTTP_AUTH_TOKEN', '')
-            LOG.warn('You have supplied an auth token header using the wrong format. Please use "X-Auth-Token"')
-
-        # TODO validate the token against the AAA using the SDK
-        # if auth == '':
-        #     raise Exception('No authentication token supplied. Try again with it!')
-        # X-Tenant-Name
+            LOG.error('No X-Auth-Token header supplied.')
+            raise Exception('No X-Auth-Token header supplied.')
 
         tenant = environ.get('HTTP_X_TENANT_NAME', '')
 
         if tenant == '':
-            auth = environ.get('HTTP_TENANT_NAME', '')
-            LOG.warn('You have supplied an auth tenant name header using the wrong format. Please use "X-Tenant-Name"')
+            LOG.error('No X-Tenant-Name header supplied.')
+            raise Exception('No X-Tenant-Name header supplied.')
 
         return super(MCNApplication, self)._call_occi(environ, response, token=auth, tenant_name=tenant)
 
