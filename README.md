@@ -80,6 +80,12 @@ To dispose of the instance you can issue the following request.
 
     $ curl -v -X DELETE http://localhost:8888/epc/59eb41f9-8cbc-4bbd-bb16-4101703d0e13 -H 'x-tenant-name: YOUR_TENANT_NAME' -H 'x-auth-token: YOUR_KEYSTONE_TOKEN'
 
+### Authentication
+To authentication you need to supply a tenant name and token. Do this by setting the following HTTP headers in your request
+
+ * X-Tenant-Name
+ * X-Auth-Token
+
 ## Quickly Getting Started
 
 1. Clone [this project](https://git.mobile-cloud-networking.eu/cloudcontroller/mcn_sm)
@@ -106,3 +112,11 @@ To dispose of the instance you can issue the following request.
 5. Run your service manager. Example using the demo:
 
         $ python ./demo_service_manager.py -c ../etc/sm.cfg
+
+## Dependency notes
+
+You must have the latest version of pyssf installed. To ensure you have the latest (> 0.4.8) you can install it from source.
+
+    $ git clone https://github.com/tmetsch/pyssf.git
+    $ cd pyssf
+    $ python ./setup.py install
