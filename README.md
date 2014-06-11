@@ -38,6 +38,7 @@ configuration file.
    * `bundle_location`: this is where your service orchestrator bundle is located. Currently **only** file path locations are supported
    * `ssh_key_location`: this is an RSA (DSA is not supported) ssh key that the service manager uses to deploy applications with and authenticate against the target git repository
      * **IMPORTANT: you should have a matching and corresponding private key that is known to your SSH sub-system**
+   * `design_uri`: the URI to your keystone service. This should have the admin port, usually 35357.
  * `cloud_controller`
    * `nb_api`: The URL to the North-bound API of the [CloudController](https://git.mobile-cloud-networking.eu/cloudcontroller/mcn_cc_api)
 
