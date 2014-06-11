@@ -18,6 +18,7 @@ __author__ = 'andy'
 from distutils import dir_util
 import os
 import random
+import requests
 import shutil
 import tempfile
 from urlparse import urlparse
@@ -25,7 +26,7 @@ from urlparse import urlparse
 from mcn.sm import CONFIG
 from mcn.sm import LOG
 from mcn.sm import timeit, conditional_decorator, DOING_PERFORMANCE_ANALYSIS
-import requests
+from sdk.mcn import util
 
 class SOManager():
 
@@ -43,6 +44,9 @@ class SOManager():
 
     @conditional_decorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def deploy(self, entity, extras):
+
+        entity.extras = {}
+
         LOG.debug('Ensuring SM SSH Key...')
         self.__ensure_ssh_key()
 
@@ -56,16 +60,18 @@ class SOManager():
         self.__deploy_app(repo_uri)
 
         host = urlparse(repo_uri).netloc.split('@')[1]
+        entity.extras['host'] = host
 
         LOG.debug('Initialising the SO...')
-        self.__init_so(host, entity, extras)
+        self.__init_so(entity, extras)
 
         # Deployment is done without any control by the client...
         # otherwise we won't be able to hand back a working service!
         LOG.debug('Deploying the SO bundle...')
-        self.__deploy_so(host, entity, extras)
+        self.__deploy_so(entity, extras)
 
-    def __init_so(self, host, entity, extras):
+    def __init_so(self, entity, extras):
+        host = entity.extras['host']
         LOG.debug('Initialising SO with: ' + 'http://' + host + "/action=init")
         # TODO send `entity`'s attributes along with the call to deploy
         r = requests.post('http://' + host + "/action=init",
@@ -76,48 +82,79 @@ class SOManager():
                         )
         r.raise_for_status()
 
-    def __deploy_so(self, host, entity, extras):
+    def __deploy_so(self, entity, extras):
+        host = entity.extras['host']
         # make call to the SO's endpoint to execute the provision command
         LOG.debug('Deploying SO with: ' + 'http://' + host + '/action=deploy')
-        r = requests.post('http://' + host + '/action=deploy', headers={'Auth-Token': extras['token']})
+        r = requests.post('http://' + host + '/action=deploy',
+                          headers={
+                              'X-Auth-Token': extras['token'],
+                              'X-Tenant-Name': extras['tenant_name']
+                          }
+                        )
         r.raise_for_status()
 
-    def dispose(self, entity, extras):
-        # XXX does not call the dispose method of SO
+        # Store the stack id. This should not be shown to the EEU.
+        if r.content == 'Please initialize SO with token and tenant first.': #TODO if reaching this condition again - investigate SO impl
+            entity.attributes['mcn.service.state'] = 'failed'
+            raise Exception('Error deploying the SO')
+        else:
+            LOG.debug('Heat stack id of service instance: ' + r.content)
+            entity.extras['stack_id'] = r.content
 
-        LOG.info('Disposing service instance: ' + ' FIXME!')
-        # host can be taken from: host = urlparse(repo_uri).netloc.split('@')[1]
-        host = ''
-        # host = urlparse(repo_uri).netloc.split('@')[1]
+    @conditional_decorator(timeit, DOING_PERFORMANCE_ANALYSIS)
+    def dispose(self, entity, extras):
+        host = entity.extras['host']
+
+        LOG.info('Disposing service orchestrator with: ' + host + '/action=dispose')
         r = requests.post('http://' + host + '/action=dispose')
         r.raise_for_status()
 
-        LOG.info('Disposing service orchestrator: ' + ' FIXME!')
-        r = requests.delete(self.nburl + entity.identifier,
+        LOG.info('Disposing service orchestrator container via CC...' + entity.identifier.replace('/epc/', '/app/'))
+        r = requests.delete(self.nburl + entity.identifier.replace('/epc/', '/app/'),
                             headers={'Content-Type': 'text/occi',
-                                     'Auth-Token': extras['token']})
+                                     'X-Auth-Token': extras['token'],
+                                     'X-Tenant-Name': extras['tenant_name']
+                            }
+                           )
         r.raise_for_status()
 
-        #TODO query for service instance management endpoints
-
+    @conditional_decorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def so_details(self, entity, extras):
-        pass
+        design_uri = CONFIG.get('service_manager', 'design_uri')
+        deployer = util.get_deployer(extras['token'], url_type='public', tenant_name=extras['tenant_name'],
+                                     endpoint=design_uri)
+
+        LOG.debug('Getting details on heat stack: ' + entity.extras['stack_id'])
+        details = deployer.details(identifier=entity.extras['stack_id'], token=extras['token'])
+
+        #service state model:
+        #  - init
+        #  - deploying
+        #  - provisioning
+        #  - active (entered into runtime ops)
+        #  - destroying
+        #  - failed
+
+        if details['state'] == 'CREATE_FAILED':
+            entity.attributes['mcn.service.state'] = 'failed'
+            LOG.error('Heat stack provisioning failed for stack: ' + entity.extras['stack_id'])
+        else:
+            LOG.debug('Stack state: ' + details['state'])
+            entity.attributes['mcn.service.state'] = 'active'
+
+        #TODO ensure only the Kind-defined attributes are set
+        for output_kv in details['output']:
+            LOG.debug('Setting OCCI attrib: ' + output_kv['output_key'] + ' : ' + output_kv['output_value'])
+            entity.attributes[output_kv['output_key']] = output_kv['output_value']
 
     def __create_app(self, entity, extras):
-        '''
-            create an app
-            how if:
-                SLA == bronze, size of gear should be small
-                SLA == silver, size of gear should be medium
-                SLA == gold, size of gear should be large
-        '''
 
-        # XXX app name random string is not guaranteed to be unique!
         create_app_headers = {'Content-Type': 'text/occi',
             'Category': 'app; scheme="http://schemas.ogf.org/occi/platform#", '
             'python-2.7; scheme="http://schemas.openshift.com/template/app#", '
             'small; scheme="http://schemas.openshift.com/template/app#"',
-            'X-OCCI-Attribute': 'occi.app.name=serviceinstance' +
+            'X-OCCI-Attribute': 'occi.app.name=srvinst' +
                                 ''.join(random.choice('0123456789ABCDEF') for i in range(16))
             }
 
@@ -132,10 +169,15 @@ class SOManager():
 
         app_uri_path = urlparse(loc).path
         LOG.debug('SO container created: ' + app_uri_path)
-        LOG.debug('Updating OCCI entity.id from: ' + entity.identifier + ' to: ' + app_uri_path)
-        entity.identifier = app_uri_path
 
-        # get git uri
+        LOG.debug('Updating OCCI entity.identifier from: ' + entity.identifier + ' to: '
+                  + app_uri_path.replace('/app/', entity.kind.location))
+        entity.identifier = app_uri_path.replace('/app/', entity.kind.location)
+
+        LOG.debug('Setting occi.core.id to: ' + app_uri_path.replace('/app/', ''))
+        entity.attributes['occi.core.id'] = app_uri_path.replace('/app/', '')
+
+        # get git uri. this is where our bundle is pushed to
         r = requests.get(self.nburl + app_uri_path, headers={'Accept': 'text/occi'})
 
         attrs = r.headers.get('X-OCCI-Attribute','')
@@ -199,7 +241,7 @@ class SOManager():
 
         if len(locs.split()) < 1:
             LOG.debug('No SM SSH registered. Registering default SM SSH key.')
-            occi_key_name, occi_key_content = self._extract_public_key()
+            occi_key_name, occi_key_content = self.__extract_public_key()
 
             create_key_headers = {'Content-Type': 'text/occi',
                 'Category': 'public_key; scheme="http://schemas.ogf.org/occi/security/credentials#"',
@@ -211,7 +253,7 @@ class SOManager():
         else:
             LOG.debug('Valid SM SSH is registered with OpenShift.')
 
-    def _extract_public_key(self):
+    def __extract_public_key(self):
 
         ssh_key_file = CONFIG.get('service_manager', 'ssh_key_location')
         LOG.debug('Using SSH key file: ' + ssh_key_file)
@@ -230,5 +272,3 @@ class SOManager():
                 key_name = content[2]
 
             return key_name, key_content
-
-
