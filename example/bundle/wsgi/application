@@ -57,15 +57,15 @@ class Application:
         elif environ['PATH_INFO'] == '/action=deploy' \
                 and environ['REQUEST_METHOD'] == 'POST':
             if self.so is None:
-                response_body = 'Please initialize SO with token first.'
+                response_body = 'Please initialize SO with token and tenant first.'
             else:
                 self.so.so_e.deploy()
-                response_body = 'Stack id: ' + str(self.so.so_e.stack_id)
+                response_body = str(self.so.so_e.stack_id)
 
         elif environ['PATH_INFO'] == '/action=dispose' \
                 and environ['REQUEST_METHOD'] == 'POST':
             if self.so is None:
-                response_body = 'Please initialize SO with token first.'
+                response_body = 'Please initialize SO with token and tenant first.'
             else:
                 self.so.so_e.dispose()
                 response_body = "OK"
