@@ -33,6 +33,8 @@ class SMRegistry(NonePersistentRegistry):
     def add_resource(self, key, resource, extras):
         self.resources[resource.identifier] = resource
 
+    def get_resource(self, key, extras):
+        return self.resources[key]
 
 class MCNApplication(Application):
     def __init__(self):
