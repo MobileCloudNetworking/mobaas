@@ -70,9 +70,46 @@ class Service():
     def register_extension(self, mixin, backend):
         self.app.register_backend(mixin, backend)
 
+    def register_service(self, srv_type):
+        # if not in keystone service regsitry, then register the service and its endpoints
+        from sdk.mcn import util
+        from keystoneclient.v2_0 import client
+
+        #TODO validate these are set
+        design_uri = CONFIG.get('service_manager', 'design_uri')
+        token = CONFIG.get('service_manager_admin', 'service_token')
+        tenant_name = CONFIG.get('service_manager_admin', 'service_tenant_name')
+
+        srv_ep = util.services.get_service_endpoint(identifier=srv_type.term, token=token, endpoint=design_uri,
+                                                    tenant_name=tenant_name, url_type='public')
+        if srv_ep is None or srv_ep == '':
+            LOG.debug('Registering the service with the keystone service...')
+
+            keystone = client.Client(token=token, tenant_name=tenant_name, auth_url=design_uri)
+
+            # taken from the kind definition
+            # TODO note in documentation that the admin URL should be accessible by the SM
+            s = keystone.services.create(srv_type.term, srv_type.scheme+srv_type.term, srv_type.title)
+
+            #TODO validate these are set
+            region = CONFIG.get('service_manager_admin', 'region')
+            service_endpoint = CONFIG.get('service_manager_admin', 'service_endpoint')
+            internalurl = adminurl = publicurl = service_endpoint
+
+            ep = keystone.endpoints.create(region, s.id, publicurl, adminurl, internalurl)
+            LOG.debug('Service is now registered with keystone: ID: ' + ep.id + ' Region: ' + ep.region + ' Public URL: ' + ep.publicurl)
+        else:
+            LOG.debug('Service is already registered with keystone. Service endpoint is: ' + srv_ep)
+
+        return
+
     def run(self):
         # register the Service & backend
         self.app.register_backend(self.srv_type, self.service_backend)
+
+        reg_srv = CONFIG.getboolean('service_manager_admin', 'register_service')
+        if reg_srv:
+            self.register_service(self.srv_type)
 
         LOG.info('Service Manager running on interfaces, running on port: ' + CONFIG.get('general', 'port'))
         httpd = make_server('', int(CONFIG.get('general', 'port')), self.app)
