@@ -33,15 +33,11 @@ All configuration of the service manager is carried out through `etc/sm.cfg`. Th
 configuration file.
 
  * `general` - this configuration is used by the code under the namespace of mcn.sm.
-   * `port`: the port number on which the service manager listens
  * `service_manager` - this is configuration related to the service manager that you implement
-   * `bundle_location`: this is where your service orchestrator bundle is located. Currently **only** file path locations are supported
-   * `ssh_key_location`: this is an RSA (DSA is not supported) ssh key that the service manager uses to deploy applications with and authenticate against the target git repository
-     * **IMPORTANT: you should have a matching and corresponding private key that is known to your SSH sub-system**
-   * `design_uri`: the URI to your keystone service. This should have the admin port, usually 35357.
- * `cloud_controller`
-   * `nb_api`: The URL to the North-bound API of the [CloudController](https://git.mobile-cloud-networking.eu/cloudcontroller/mcn_cc_api)
+ * `service_manager_admin` - this section is related to the registration of the service with keystone
+ * `cloud_controller` - configuration related to the cloudcontroller
 
+Please see the configuration file `etc/sm.cfg` for further parameter descriptions.
 This service manager framework assumes that the bundle supplied will be deployed using git.
 
 ### Configuration of demo SO bundle
