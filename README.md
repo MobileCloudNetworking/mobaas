@@ -112,8 +112,15 @@ To authentication you need to supply a tenant name and token. Do this by setting
 
 ## Dependency notes
 
-You must have the latest version of pyssf installed. To ensure you have the latest (> 0.4.8) you can install it from source.
+1. You must have the MCN SDK installed on the machine where you run your service manager. To do so:
 
-    $ git clone https://github.com/tmetsch/pyssf.git
-    $ cd pyssf
-    $ python ./setup.py install
+        $ git clone git@git.mobile-cloud-networking.eu:cloudcontroller/mcn_cc_sdk.git
+        $ cd mcn_cc_sdk
+        $ python ./setup.py install
+
+1. You must have the latest version of pyssf installed. To ensure you have the latest (> 0.4.8) you can install it from source.
+
+        $ git clone https://github.com/tmetsch/pyssf.git
+        $ cd pyssf
+        $ python ./setup.py install
+
