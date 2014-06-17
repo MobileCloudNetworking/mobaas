@@ -31,7 +31,9 @@ from sdk.mcn import util
 class SOManager():
 
     def __init__(self):
-        self.nburl = CONFIG.get('cloud_controller', 'nb_api')
+        self.nburl = CONFIG.get('cloud_controller', 'nb_api', '')
+        if self.nburl:
+            raise Exception('No nb_api paramter specified in sm.cfg')
 
         #scrub off any trailing slash
         if self.nburl[-1] == '/':
@@ -150,6 +152,7 @@ class SOManager():
 
     def __create_app(self, entity, extras):
 
+        # name must be A-Za-z0-9 and <=32 chars
         create_app_headers = {'Content-Type': 'text/occi',
             'Category': 'app; scheme="http://schemas.ogf.org/occi/platform#", '
             'python-2.7; scheme="http://schemas.openshift.com/template/app#", '
@@ -211,7 +214,9 @@ class SOManager():
         os.system(cmd)
 
         # Get the SO bundle
-        bundle_loc = CONFIG.get('service_manager', 'bundle_location')
+        bundle_loc = CONFIG.get('service_manager', 'bundle_location', '')
+        if bundle_loc == '':
+            raise Exception('No bundle_location parameter supplied in sm.cfg')
         LOG.debug('Bundle to add to repo: ' + bundle_loc)
         dir_util.copy_tree(bundle_loc, dir)
 
@@ -255,7 +260,9 @@ class SOManager():
 
     def __extract_public_key(self):
 
-        ssh_key_file = CONFIG.get('service_manager', 'ssh_key_location')
+        ssh_key_file = CONFIG.get('service_manager', 'ssh_key_location', '')
+        if ssh_key_file == '':
+            raise Exception('No ssh_key_location parameter supplied in sm.cfg')
         LOG.debug('Using SSH key file: ' + ssh_key_file)
 
         with open(ssh_key_file, 'r') as content_file:
