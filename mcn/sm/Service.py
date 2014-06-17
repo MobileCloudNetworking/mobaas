@@ -70,15 +70,21 @@ class Service():
     def register_extension(self, mixin, backend):
         self.app.register_backend(mixin, backend)
 
+    #TODO this functionality should be moved over to the SDK
     def register_service(self, srv_type):
         # if not in keystone service regsitry, then register the service and its endpoints
         from sdk.mcn import util
         from keystoneclient.v2_0 import client
 
-        #TODO validate these are set
         design_uri = CONFIG.get('service_manager', 'design_uri')
-        token = CONFIG.get('service_manager_admin', 'service_token')
+        if design_uri == '':
+            raise Exception('No design_uri parameter supplied in sm.cfg')
+        token = CONFIG.get('service_manager_admin', 'service_token', '')
+        if token == '':
+            raise Exception('No service_token parameter supplied in sm.cfg')
         tenant_name = CONFIG.get('service_manager_admin', 'service_tenant_name')
+        if tenant_name == '':
+            raise Exception('No tenant_name parameter supplied in sm.cfg')
 
         srv_ep = util.services.get_service_endpoint(identifier=srv_type.term, token=token, endpoint=design_uri,
                                                     tenant_name=tenant_name, url_type='public')
@@ -89,11 +95,17 @@ class Service():
 
             # taken from the kind definition
             # TODO note in documentation that the admin URL should be accessible by the SM
-            s = keystone.services.create(srv_type.term, srv_type.scheme+srv_type.term, srv_type.title)
+            s = keystone.services.create(srv_type.scheme+srv_type.term, srv_type.scheme+srv_type.term, srv_type.title)
 
-            #TODO validate these are set
-            region = CONFIG.get('service_manager_admin', 'region')
+            region = CONFIG.get('service_manager_admin', 'region', '')
+            if region == '':
+                LOG.info('No region parameter specified in sm.cfg, defaulting to RegionOne')
+                region = 'RegionOne'
             service_endpoint = CONFIG.get('service_manager_admin', 'service_endpoint')
+            if service_endpoint == '':
+                raise Exception('No service_endpoint parameter supplied in sm.cfg')
+
+            #XXX it may be needed to specify internal, admin and pubilc URLs
             internalurl = adminurl = publicurl = service_endpoint
 
             ep = keystone.endpoints.create(region, s.id, publicurl, adminurl, internalurl)
@@ -107,6 +119,7 @@ class Service():
         # register the Service & backend
         self.app.register_backend(self.srv_type, self.service_backend)
 
+        #TODO fix for if param not present in config file
         reg_srv = CONFIG.getboolean('service_manager_admin', 'register_service')
         if reg_srv:
             self.register_service(self.srv_type)
