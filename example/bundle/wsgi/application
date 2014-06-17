@@ -35,7 +35,7 @@ import so
 
 class Application:
     """
-    # TODO: replace with OCCI wsgi app.
+    # TODO: replace with OCCI wsgi app. https://git.mobile-cloud-networking.eu/cloudcontroller/mcn_cc_sdk/tree/master/misc/new_so/wsgi
     """
 
     def __init__(self):
