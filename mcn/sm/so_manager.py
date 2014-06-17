@@ -32,7 +32,7 @@ class SOManager():
 
     def __init__(self):
         self.nburl = CONFIG.get('cloud_controller', 'nb_api', '')
-        if self.nburl:
+        if self.nburl == '':
             raise Exception('No nb_api paramter specified in sm.cfg')
 
         #scrub off any trailing slash
