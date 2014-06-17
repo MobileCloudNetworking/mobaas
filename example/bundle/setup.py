@@ -1,4 +1,5 @@
 #   Copyright (c) 2013-2015, Intel Performance Learning Solutions Ltd, Intel Corporation.
+#   Copyright 2014 Zuercher Hochschule fuer Angewandte Wissenschaften
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -18,12 +19,12 @@ Setuptools script.
 
 from setuptools import setup
 
-setup(name='sample_so',
+setup(name='sample_epc_so',
       version='0.1',
-      description='Sample SO',
-      author='Intel Performance Learning Solutions Ltd, Intel Corporation.',
-      author_email='thijs.metsch@intel.com',
-      url='http://www.intel.com',
+      description='Sample EPC SO',
+      author='Intel Performance Learning Solutions Ltd, Intel Corporation, Zuercher Hochschule fuer Angewandte Wissenschaften.',
+      author_email='thijs.metsch@intel.com, edmo@zhaw.ch',
+      url='http://www.intel.com, http://cloudcomp.ch',
       license='Apache 2.0',
       packages=['wsgi'],
 )

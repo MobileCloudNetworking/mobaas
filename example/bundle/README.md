@@ -21,14 +21,15 @@ In a new terminal do get a token from keystone:
 
     $ keystone token-get
     $ export KID='...'
+    $ export TENANT_NAME='ExampleTenant'
 
 You can now visit the SO interface at [here](localhost:8051):
 
-    $ curl -X POST localhost:8051/action=init -H 'Auth-Token: '$KID
-    $ curl -X GET localhost:8051/
-    $ curl -X GET localhost:8051/state
-    $ curl -X POST localhost:8051/action=deploy
-    $ curl -X POST localhost:8051/action=dispose
+    $ curl -X POST localhost:8051/action=init -H 'X-Auth-Token: '$KID  -H 'X-Tenant-Na,e: '$TENANT_NAME
+    $ curl -X GET localhost:8051/ -H 'X-Auth-Token: '$KID  -H 'X-Tenant-Na,e: '$TENANT_NAME
+    $ curl -X GET localhost:8051/state -H 'X-Auth-Token: '$KID  -H 'X-Tenant-Na,e: '$TENANT_NAME
+    $ curl -X POST localhost:8051/action=deploy -H 'X-Auth-Token: '$KID  -H 'X-Tenant-Na,e: '$TENANT_NAME
+    $ curl -X POST localhost:8051/action=dispose -H 'X-Auth-Token: '$KID  -H 'X-Tenant-Na,e: '$TENANT_NAME
 
 # SM Notes
 
