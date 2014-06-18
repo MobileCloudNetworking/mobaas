@@ -112,6 +112,7 @@ class SOManager():
         r = requests.post('http://' + host + '/action=dispose')
         r.raise_for_status()
 
+        #TODO ensure that there is no conflict between location and term!
         LOG.info('Disposing service orchestrator container via CC... ' + entity.identifier.replace('/' + entity.kind.term + '/', '/app/'))
         r = requests.delete(self.nburl + entity.identifier.replace('/' + entity.kind.term + '/', '/app/'),
                             headers={'Content-Type': 'text/occi',
