@@ -146,7 +146,7 @@ class SOManager():
         #  - destroying
         #  - failed
 
-        if details['state'] == 'CREATE_FAILED':
+        if details['state'] == u'CREATE_FAILED':
             entity.attributes['mcn.service.state'] = 'failed'
             LOG.error('Heat stack provisioning failed for stack: ' + entity.extras['stack_id'])
         else:
