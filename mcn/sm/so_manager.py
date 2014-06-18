@@ -123,6 +123,14 @@ class SOManager():
 
     @conditional_decorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def so_details(self, entity, extras):
+        #TODO this should be removed in favour of http://container:port/state
+
+        # host = entity.extras['host']
+        #
+        # LOG.info('Getting state of service orchestrator with: ' + host + '/state')
+        # r = requests.post('http://' + host + '/state')
+        # r.raise_for_status()
+
         design_uri = CONFIG.get('service_manager', 'design_uri')
         deployer = util.get_deployer(extras['token'], url_type='public', tenant_name=extras['tenant_name'],
                                      endpoint=design_uri)
@@ -147,7 +155,7 @@ class SOManager():
 
         #TODO ensure only the Kind-defined attributes are set
         for output_kv in details['output']:
-            LOG.debug('Setting OCCI attrib: ' + output_kv['output_key'] + ' : ' + output_kv['output_value'])
+            LOG.debug('Setting OCCI attrib: ' + str(output_kv['output_key']) + ' : ' + str(output_kv['output_value'])   )
             entity.attributes[output_kv['output_key']] = output_kv['output_value']
 
     def __create_app(self, entity, extras):
