@@ -112,8 +112,8 @@ class SOManager():
         r = requests.post('http://' + host + '/action=dispose')
         r.raise_for_status()
 
-        LOG.info('Disposing service orchestrator container via CC...' + entity.identifier.replace('/epc/', '/app/'))
-        r = requests.delete(self.nburl + entity.identifier.replace('/epc/', '/app/'),
+        LOG.info('Disposing service orchestrator container via CC... ' + entity.identifier.replace('/' + entity.kind.term + '/', '/app/'))
+        r = requests.delete(self.nburl + entity.identifier.replace('/' + entity.kind.term + '/', '/app/'),
                             headers={'Content-Type': 'text/occi',
                                      'X-Auth-Token': extras['token'],
                                      'X-Tenant-Name': extras['tenant_name']
