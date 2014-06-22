@@ -36,13 +36,9 @@ class ServiceBackend(KindBackend, ActionBackend):
 
     def update(self, old, new, extras):
         raise NotImplementedError()
-        #TODO
-        # super(ServiceBackend, self).update(old, new, extras)
 
     def replace(self, old, new, extras):
         raise NotImplementedError()
-        #TODO
-        #super(ServiceBackend, self).replace(old, new, extras)
 
     def delete(self, entity, extras):
         super(ServiceBackend, self).delete(entity, extras)
@@ -51,7 +47,6 @@ class ServiceBackend(KindBackend, ActionBackend):
     # currently not exposed on the kind
     def action(self, entity, action, attributes, extras):
         raise NotImplementedError()
-        # TODO
         # super(ServiceBackend, self).action(entity, action, attributes, extras)
         # if action == 'provision':
         #     #pass service_instance_id here

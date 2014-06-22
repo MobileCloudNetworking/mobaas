@@ -97,7 +97,7 @@ class SOManager():
         r.raise_for_status()
 
         # Store the stack id. This should not be shown to the EEU.
-        if r.content == 'Please initialize SO with token and tenant first.': #TODO if reaching this condition again - investigate SO impl
+        if r.content == 'Please initialize SO with token and tenant first.':
             entity.attributes['mcn.service.state'] = 'failed'
             raise Exception('Error deploying the SO')
         else:
