@@ -28,10 +28,13 @@ from mcn.sm import LOG
 from mcn.sm import timeit, conditional_decorator, DOING_PERFORMANCE_ANALYSIS
 from sdk.mcn import util
 
+# XXX: SDK import should be removed.
+
+
 class SOManager():
 
     def __init__(self):
-        self.nburl = CONFIG.get('cloud_controller', 'nb_api', '')
+        self.nburl = CONFIG.get('cloud_controller', 'nb_api')
         if self.nburl == '':
             raise Exception('No nb_api paramter specified in sm.cfg')
 
@@ -192,7 +195,7 @@ class SOManager():
         # get git uri. this is where our bundle is pushed to
         r = requests.get(self.nburl + app_uri_path, headers={'Accept': 'text/occi'})
 
-        attrs = r.headers.get('X-OCCI-Attribute','')
+        attrs = r.headers.get('X-OCCI-Attribute', '')
         if attrs == '':
             raise AttributeError("No occi attributes found in request")
 
@@ -215,6 +218,7 @@ class SOManager():
             - a git repo is returned
             - the bundle is not managed by git
         """
+        # XXX: looks a lot like cc_deploy from mcn_cc :-) add (c)?
 
         # create temp dir...and clone the remote repo provided by OpS
         dir = tempfile.mkdtemp()

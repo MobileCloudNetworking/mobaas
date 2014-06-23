@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+# XXX: Rename file to service.py
+
 __author__ = 'andy'
 
 from wsgiref.simple_server import make_server
@@ -36,7 +38,9 @@ class SMRegistry(NonePersistentRegistry):
     def get_resource(self, key, extras):
         return self.resources[key]
 
+
 class MCNApplication(Application):
+
     def __init__(self):
         super(MCNApplication, self).__init__(registry=SMRegistry())
 
@@ -50,6 +54,7 @@ class MCNApplication(Application):
         if auth == '':
             LOG.error('No X-Auth-Token header supplied.')
             raise Exception('No X-Auth-Token header supplied.')
+            # XXX: better change to sending back 401 - don't throw exceptions around.
 
         tenant = environ.get('HTTP_X_TENANT_NAME', '')
 
@@ -57,6 +62,7 @@ class MCNApplication(Application):
             LOG.error('No X-Tenant-Name header supplied.')
             raise Exception('No X-Tenant-Name header supplied.')
 
+        # XXX: better: self._call_occi...
         return super(MCNApplication, self)._call_occi(environ, response, token=auth, tenant_name=tenant)
 
 
@@ -72,9 +78,11 @@ class Service():
 
     #TODO this functionality should be moved over to the SDK
     def register_service(self, srv_type):
+        # XXX: following code should either a) solely use SDK or b) not use SDK ata ll and go to keystone directl.y
         # if not in keystone service regsitry, then register the service and its endpoints
         from sdk.mcn import util
         from keystoneclient.v2_0 import client
+        # XXX: move import up.
 
         design_uri = CONFIG.get('service_manager', 'design_uri')
         if design_uri == '':

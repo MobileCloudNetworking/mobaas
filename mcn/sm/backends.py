@@ -19,10 +19,12 @@ from occi.backend import ActionBackend, KindBackend
 
 from mcn.sm.so_manager import SOManager
 
+
 class ServiceBackend(KindBackend, ActionBackend):
     '''
     Provides the basic functionality required to CRUD SOs
     '''
+
     def __init__(self):
         self.som = SOManager()
 

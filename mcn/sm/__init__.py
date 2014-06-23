@@ -17,13 +17,15 @@ __author__ = 'andy'
 
 import ConfigParser
 import logging
-from optparse import OptionParser
 import time
 
+from optparse import OptionParser
 
 DOING_PERFORMANCE_ANALYSIS = True
 
+
 class DefaultConfigParser(ConfigParser.ConfigParser):
+
     def get(self, section, option, default='', raw=False, vars=None):
         try:
             value = ConfigParser.ConfigParser.get(self, section, option, raw, vars)
@@ -33,6 +35,7 @@ class DefaultConfigParser(ConfigParser.ConfigParser):
 
 
 class conditional_decorator(object):
+    # XXX: classes do CamelCase.
     def __init__(self, dec, condition):
         self.decorator = dec
         self.condition = condition
@@ -56,6 +59,7 @@ def timeit(method):
 
     return timed
 
+
 def config_logger(log_level=logging.DEBUG):
     logging.basicConfig(format='%(levelname)s %(asctime)s: %(message)s',
                         datefmt='%m/%d/%Y %I:%M:%S %p',
@@ -63,6 +67,7 @@ def config_logger(log_level=logging.DEBUG):
     logger = logging.getLogger(__name__)
     logger.setLevel(log_level)
     return logger
+
 
 def get_config_file():
     parser = OptionParser(usage="Usage: %prog options. See %prog -h for options.")
@@ -86,6 +91,7 @@ def get_config_file():
 options = get_config_file()
 
 DOING_PERFORMANCE_ANALYSIS = options.perf_timings
+# XXX: above is redeclared from line #24
 
 LOG = config_logger()
 LOG.info('Using configuration file: ' + options.config_file_path)
