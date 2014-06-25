@@ -45,7 +45,7 @@ class SOManager():
         LOG.info('CloudController Northbound API: ' + self.nburl)
 
         if os.system('which git') != 0:
-            raise EnvironmentError('Git is not available on the system path, or is not installed.')
+            raise EnvironmentError('Git is not available.')
 
     @conditional_decorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def deploy(self, entity, extras):
@@ -77,26 +77,22 @@ class SOManager():
 
     def __init_so(self, entity, extras):
         host = entity.extras['host']
-        LOG.debug('Initialising SO with: ' + 'http://' + host + "/action=init")
-        # TODO send `entity`'s attributes along with the call to deploy
-        r = requests.post('http://' + host + "/action=init",
-                          headers={
-                              'X-Auth-Token': extras['token'],
-                              'X-Tenant-Name': extras['tenant_name']
-                          }
-                        )
+        url = 'http://' + host + '/action=init'
+        heads = {'X-Auth-Token': extras['token'],
+                 'X-Tenant-Name': extras['tenant_name']}
+        LOG.debug('Initialising SO with: ' + url)
+        # TODO: send `entity`'s attributes along with the call to deploy
+        r = requests.post(url, headers=heads)
         r.raise_for_status()
 
     def __deploy_so(self, entity, extras):
         host = entity.extras['host']
-        # make call to the SO's endpoint to execute the provision command
-        LOG.debug('Deploying SO with: ' + 'http://' + host + '/action=deploy')
-        r = requests.post('http://' + host + '/action=deploy',
-                          headers={
-                              'X-Auth-Token': extras['token'],
-                              'X-Tenant-Name': extras['tenant_name']
-                          }
-                        )
+        url = 'http://' + host + '/action=deploy'
+        heads = {'X-Auth-Token': extras['token'],
+                 'X-Tenant-Name': extras['tenant_name']}
+        LOG.debug('Deploying SO with: ' + url)
+        # TODO: make call to the SO's endpoint to execute the provision command
+        r = requests.post(url, headers=heads)
         r.raise_for_status()
 
         # Store the stack id. This should not be shown to the EEU.
@@ -110,20 +106,21 @@ class SOManager():
     @conditional_decorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def dispose(self, entity, extras):
         host = entity.extras['host']
+        url = 'http://' + host + '/action=dispose'
+        heads = {'X-Auth-Token': extras['token'],
+                 'X-Tenant-Name': extras['tenant_name']}
 
-        LOG.info('Disposing service orchestrator with: ' + host + '/action=dispose')
-        r = requests.post('http://' + host + '/action=dispose')
+        LOG.info('Disposing service orchestrator with: ' + url)
+        r = requests.post(url, headers=heads)
         r.raise_for_status()
 
         #TODO ensure that there is no conflict between location and term!
-        LOG.info('Disposing service orchestrator container via CC... ' + entity.identifier.replace('/' + entity.kind.term + '/', '/app/'))
-        r = requests.delete(self.nburl + entity.identifier.replace('/' + entity.kind.term + '/', '/app/'),
-                            headers={'Content-Type': 'text/occi',
-                                     'X-Auth-Token': extras['token'],
-                                     'X-Tenant-Name': extras['tenant_name']
-                            }
-                           )
-        r.raise_for_status()
+        url = self.nburl + entity.identifier.replace('/' + entity.kind.term + '/', '/app/')
+        heads = {'Content-Type': 'text/occi',
+                 'X-Auth-Token': extras['token'],
+                 'X-Tenant-Name': extras['tenant_name']}
+        LOG.info('Disposing service orchestrator container via CC... ' + url)
+        self._do_cc_request('DELETE', url, heads)
 
     @conditional_decorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def so_details(self, entity, extras):
@@ -136,11 +133,14 @@ class SOManager():
         # r.raise_for_status()
 
         design_uri = CONFIG.get('service_manager', 'design_uri')
-        deployer = util.get_deployer(extras['token'], url_type='public', tenant_name=extras['tenant_name'],
+        deployer = util.get_deployer(extras['token'],
+                                     url_type='public',
+                                     tenant_name=extras['tenant_name'],
                                      endpoint=design_uri)
 
-        LOG.debug('Getting details on heat stack: ' + entity.extras['stack_id'])
-        details = deployer.details(identifier=entity.extras['stack_id'], token=extras['token'])
+        LOG.debug('Getting details on stack: ' + entity.extras['stack_id'])
+        details = deployer.details(identifier=entity.extras['stack_id'],
+                                   token=extras['token'])
 
         #service state model:
         #  - init
@@ -152,20 +152,47 @@ class SOManager():
 
         if details['state'] == u'CREATE_FAILED':
             entity.attributes['mcn.service.state'] = 'failed'
-            LOG.error('Heat stack provisioning failed for stack: ' + entity.extras['stack_id'])
+            LOG.error('Stack provisioning failed for: ' +
+                      entity.extras['stack_id'])
         else:
             LOG.debug('Stack state: ' + details['state'])
             entity.attributes['mcn.service.state'] = 'active'
 
         #TODO ensure only the Kind-defined attributes are set
         for output_kv in details['output']:
-            LOG.debug('Setting OCCI attrib: ' + str(output_kv['output_key']) + ' : ' + str(output_kv['output_value'])   )
+            LOG.debug('Setting OCCI attrib: ' + str(output_kv['output_key']) +
+                      ' : ' + str(output_kv['output_value']))
             entity.attributes[output_kv['output_key']] = output_kv['output_value']
+
+    def _do_cc_request(self, verb, url, heads):
+        """
+        Do a simple HTTP request.
+
+        :param verb: One of POST, DELETE, GET
+        :param url: The URL to use.
+        :param heads: The headers.
+        :return: the response headers.
+        """
+        user = CONFIG.get('cloud_controller', 'user')
+        pwd = CONFIG.get('cloud_controller', 'pwd')
+
+        if verb == 'POST':
+            r = requests.post(url, headers=heads, auth=(user, pwd))
+        elif verb == 'DELETE':
+            r = requests.delete(url, headers=heads, auth=(user, pwd))
+        elif verb == 'GET':
+            r = requests.get(url, headers=heads, auth=(user, pwd))
+        else:
+            raise Exception('Unknown HTTP verb.')
+
+        r.raise_for_status()
+        return r.headers
 
     def __create_app(self, entity, extras):
 
         # name must be A-Za-z0-9 and <=32 chars
-        create_app_headers = {'Content-Type': 'text/occi',
+        create_app_headers = {
+            'Content-Type': 'text/occi',
             'Category': 'app; scheme="http://schemas.ogf.org/occi/platform#", '
             'python-2.7; scheme="http://schemas.openshift.com/template/app#", '
             'small; scheme="http://schemas.openshift.com/template/app#"',
@@ -173,10 +200,10 @@ class SOManager():
                                 ''.join(random.choice('0123456789ABCDEF') for i in range(16))
             }
 
-        LOG.debug('Requesting container to execute SO Bundle: ' + self.nburl + '/app/')
         #TODO requests should be placed on a queue as this is a blocking call
-        r = requests.post(self.nburl + '/app/', headers=create_app_headers)
-        r.raise_for_status()
+        url = self.nburl + '/app/'
+        LOG.debug('Requesting container to execute SO Bundle: ' + self.nburl + '/app/')
+        r = self._do_cc_request('POST', url, create_app_headers)
 
         loc = r.headers.get('Location', '')
         if loc == '':
@@ -193,7 +220,9 @@ class SOManager():
         entity.attributes['occi.core.id'] = app_uri_path.replace('/app/', '')
 
         # get git uri. this is where our bundle is pushed to
-        r = requests.get(self.nburl + app_uri_path, headers={'Accept': 'text/occi'})
+        url = self.nburl + app_uri_path
+        headers = {'Accept': 'text/occi'}
+        r = self._do_cc_request('GET', url, headers)
 
         attrs = r.headers.get('X-OCCI-Attribute', '')
         if attrs == '':
@@ -252,9 +281,9 @@ class SOManager():
         shutil.rmtree(dir)
 
     def __ensure_ssh_key(self):
-
-        resp = requests.get(self.nburl + '/public_key/', headers={'Accept': 'text/occi'})
-        resp.raise_for_status()
+        url = self.nburl + '/public_key/'
+        heads = {'Accept': 'text/occi'}
+        resp = self._do_cc_request('GET', url, heads)
         locs = resp.headers.get('x-occi-location', '')
 
         if len(locs.split()) < 1:
@@ -265,9 +294,7 @@ class SOManager():
                 'Category': 'public_key; scheme="http://schemas.ogf.org/occi/security/credentials#"',
                 'X-OCCI-Attribute':'occi.key.name="' + occi_key_name + '", occi.key.content="' + occi_key_content + '"'
             }
-
-            resp = requests.post(self.nburl + '/public_key/', headers=create_key_headers)
-            resp.raise_for_status()
+            resp = self._do_cc_request('POST', url, create_key_headers)
         else:
             LOG.debug('Valid SM SSH is registered with OpenShift.')
 

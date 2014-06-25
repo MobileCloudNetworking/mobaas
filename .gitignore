@@ -1,5 +1,5 @@
 .idea/
-*.pyc
+.pyc
 build/
 dist/
 atlassian-ide-plugin.xml

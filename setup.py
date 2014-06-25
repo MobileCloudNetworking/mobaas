@@ -21,6 +21,6 @@ setup(name='mcn_sm',
       author_email='edmo@zhaw.ch',
       url='http://cloudcomp.ch',
       license='Apache 2.0',
-      packages=['mcn','mcn.sm'],
-      requires=['pyssf', 'mox', 'requests']
+      packages=['mcn', 'mcn.sm'],
+      requires=['pyssf', 'requests']
      )
