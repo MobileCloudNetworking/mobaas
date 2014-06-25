@@ -186,7 +186,7 @@ class SOManager():
             raise Exception('Unknown HTTP verb.')
 
         r.raise_for_status()
-        return r.headers
+        return r
 
     def __create_app(self, entity, extras):
 
