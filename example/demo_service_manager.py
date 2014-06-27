@@ -12,14 +12,14 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-from mcn.sm.service import Service
+from mcn.sm.Service import Service
 
 __author__ = 'andy'
 
 from occi.core_model import Kind as Type
 from occi.core_model import Resource
 
-from mcn.sm.service import MCNApplication
+from mcn.sm.Service import MCNApplication
 
 if __name__ == '__main__':
 
