@@ -29,13 +29,14 @@ from mcn.sm import timeit, conditional_decorator, DOING_PERFORMANCE_ANALYSIS
 from sdk.mcn import util
 
 # XXX: SDK import should be removed.
-
+# XXX: all URLs are hardcoded to 'http'
 
 class SOManager():
 
     def __init__(self):
-        self.nburl = CONFIG.get('cloud_controller', 'nb_api')
+        self.nburl = CONFIG.get('cloud_controller', 'nb_api', '')
         if self.nburl == '':
+            # XXX throw specific exception
             raise Exception('No nb_api paramter specified in sm.cfg')
 
         #scrub off any trailing slash
@@ -105,6 +106,8 @@ class SOManager():
 
     @conditional_decorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def dispose(self, entity, extras):
+        # 1. dispose the active SO, essentially kills the STG/ITG
+        # 2. dispose the resources used to run the SO
         host = entity.extras['host']
         url = 'http://' + host + '/action=dispose'
         heads = {'X-Auth-Token': extras['token'],
@@ -124,7 +127,6 @@ class SOManager():
 
     @conditional_decorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def so_details(self, entity, extras):
-        #TODO this should be removed in favour of http://container:port/state
 
         # host = entity.extras['host']
         #
@@ -132,6 +134,7 @@ class SOManager():
         # r = requests.post('http://' + host + '/state')
         # r.raise_for_status()
 
+        #TODO this should be removed in favour of http://container:port/state
         design_uri = CONFIG.get('service_manager', 'design_uri')
         deployer = util.get_deployer(extras['token'],
                                      url_type='public',
@@ -264,7 +267,7 @@ class SOManager():
 
         # put OpenShift stuff in place
         # build and pre_start_python comes from 'support' directory in bundle
-        # XXX could be improved - e.g. could use from mako.template import Template?
+        # XXX could be improved - e.g. could use from mako.template import Template? - use this to inject the design_uri
         LOG.debug('Adding OpenShift support files from: ' + bundle_loc + '/support')
         shutil.copyfile(bundle_loc+'/support/build', os.path.join(dir, '.openshift', 'action_hooks', 'build'))
         shutil.copyfile(bundle_loc+'/support/pre_start_python', os.path.join(dir, '.openshift', 'action_hooks', 'pre_start_python'))

@@ -21,8 +21,6 @@ import time
 
 from optparse import OptionParser
 
-DOING_PERFORMANCE_ANALYSIS = True
-
 
 class DefaultConfigParser(ConfigParser.ConfigParser):
 
@@ -91,7 +89,6 @@ def get_config_file():
 options = get_config_file()
 
 DOING_PERFORMANCE_ANALYSIS = options.perf_timings
-# XXX: above is redeclared from line #24
 
 LOG = config_logger()
 LOG.info('Using configuration file: ' + options.config_file_path)

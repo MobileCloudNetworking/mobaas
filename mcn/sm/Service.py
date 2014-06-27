@@ -84,13 +84,13 @@ class Service():
         from keystoneclient.v2_0 import client
         # XXX: move import up.
 
-        design_uri = CONFIG.get('service_manager', 'design_uri')
+        design_uri = CONFIG.get('service_manager', 'design_uri', '')
         if design_uri == '':
             raise Exception('No design_uri parameter supplied in sm.cfg')
         token = CONFIG.get('service_manager_admin', 'service_token', '')
         if token == '':
             raise Exception('No service_token parameter supplied in sm.cfg')
-        tenant_name = CONFIG.get('service_manager_admin', 'service_tenant_name')
+        tenant_name = CONFIG.get('service_manager_admin', 'service_tenant_name', '')
         if tenant_name == '':
             raise Exception('No tenant_name parameter supplied in sm.cfg')
 
