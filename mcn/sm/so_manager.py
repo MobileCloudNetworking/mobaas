@@ -147,8 +147,7 @@ class SOManager():
 
         #service state model:
         #  - init
-        #  - deploying
-        #  - provisioning
+        #  - creating (deploy/provisioning)
         #  - active (entered into runtime ops)
         #  - destroying
         #  - failed
@@ -157,15 +156,18 @@ class SOManager():
             entity.attributes['mcn.service.state'] = 'failed'
             LOG.error('Stack provisioning failed for: ' +
                       entity.extras['stack_id'])
+        if details['state'] == u'CREATE_IN_PROGRESS':
+            entity.attributes['mcn.service.state'] = 'creating'
+            LOG.info('Stack creating...' + entity.extras['stack_id'])
         else:
             LOG.debug('Stack state: ' + details['state'])
             entity.attributes['mcn.service.state'] = 'active'
 
-        #TODO ensure only the Kind-defined attributes are set
-        for output_kv in details['output']:
-            LOG.debug('Setting OCCI attrib: ' + str(output_kv['output_key']) +
-                      ' : ' + str(output_kv['output_value']))
-            entity.attributes[output_kv['output_key']] = output_kv['output_value']
+            #TODO ensure only the Kind-defined attributes are set
+            for output_kv in details['output']:
+                LOG.debug('Setting OCCI attrib: ' + str(output_kv['output_key']) +
+                          ' : ' + str(output_kv['output_value']))
+                entity.attributes[output_kv['output_key']] = output_kv['output_value']
 
     def _do_cc_request(self, verb, url, heads):
         """
