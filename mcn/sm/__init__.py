@@ -64,6 +64,12 @@ def config_logger(log_level=logging.DEBUG):
                         log_level=log_level)
     logger = logging.getLogger(__name__)
     logger.setLevel(log_level)
+
+    hdlr = logging.FileHandler('sm.log')
+    formatter = logging.Formatter(fmt='%(levelname)s %(asctime)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+    hdlr.setFormatter(formatter)
+    logger.addHandler(hdlr)
+
     return logger
 
 
