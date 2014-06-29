@@ -26,9 +26,7 @@ from urlparse import urlparse
 from mcn.sm import CONFIG
 from mcn.sm import LOG
 from mcn.sm import timeit, conditional_decorator, DOING_PERFORMANCE_ANALYSIS
-from sdk.mcn import util
 
-# XXX: SDK import should be removed.
 # XXX: all URLs are hardcoded to 'http'
 
 class SOManager():
@@ -128,22 +126,13 @@ class SOManager():
     @conditional_decorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def so_details(self, entity, extras):
 
-        # host = entity.extras['host']
-        #
-        # LOG.info('Getting state of service orchestrator with: ' + host + '/state')
-        # r = requests.post('http://' + host + '/state')
-        # r.raise_for_status()
+        import json
+        host = entity.extras['host']
 
-        #TODO this should be removed in favour of http://container:port/state
-        design_uri = CONFIG.get('service_manager', 'design_uri')
-        deployer = util.get_deployer(extras['token'],
-                                     url_type='public',
-                                     tenant_name=extras['tenant_name'],
-                                     endpoint=design_uri)
-
-        LOG.debug('Getting details on stack: ' + entity.extras['stack_id'])
-        details = deployer.details(identifier=entity.extras['stack_id'],
-                                   token=extras['token'])
+        LOG.info('Getting state of service orchestrator with: ' + host + '/state')
+        r = requests.post('http://' + host + '/state')
+        r.raise_for_status()
+        details = json.loads(r.content)
 
         #service state model:
         #  - init
@@ -152,22 +141,32 @@ class SOManager():
         #  - destroying
         #  - failed
 
-        if details['state'] == u'CREATE_FAILED':
-            entity.attributes['mcn.service.state'] = 'failed'
-            LOG.error('Stack provisioning failed for: ' +
-                      entity.extras['stack_id'])
-        if details['state'] == u'CREATE_IN_PROGRESS':
-            entity.attributes['mcn.service.state'] = 'creating'
-            LOG.info('Stack creating...' + entity.extras['stack_id'])
-        else:
-            LOG.debug('Stack state: ' + details['state'])
-            entity.attributes['mcn.service.state'] = 'active'
+        #XXX this is a hack, will be removed with OCCI SO support
+        if (type(details) == type('str')) or (type(details) == type(u'unicode')):
+            LOG.debug('content:\n' + details)
 
-            #TODO ensure only the Kind-defined attributes are set
-            for output_kv in details['output']:
-                LOG.debug('Setting OCCI attrib: ' + str(output_kv['output_key']) +
-                          ' : ' + str(output_kv['output_value']))
-                entity.attributes[output_kv['output_key']] = output_kv['output_value']
+            for detail in details.split(','):
+                name_val = detail.split()[1].split('=')
+                LOG.debug('OCCI Attribute: ' + name_val[0] + '-->' + name_val[1])
+                entity.attributes[name_val[0]] = name_val[1]
+
+        else:
+            if details['state'] == u'CREATE_FAILED':
+                entity.attributes['mcn.service.state'] = 'failed'
+                LOG.error('Stack provisioning failed for: ' +
+                          entity.extras['stack_id'])
+            if details['state'] == u'CREATE_IN_PROGRESS':
+                entity.attributes['mcn.service.state'] = 'creating'
+                LOG.info('Stack creating...' + entity.extras['stack_id'])
+            else:
+                LOG.debug('Stack state: ' + details['state'])
+                entity.attributes['mcn.service.state'] = 'active'
+
+                #TODO ensure only the Kind-defined attributes are set
+                for output_kv in details['output']:
+                    LOG.debug('Setting OCCI attrib: ' + str(output_kv['output_key']) +
+                              ' : ' + str(output_kv['output_value']))
+                    entity.attributes[output_kv['output_key']] = output_kv['output_value']
 
     def _do_cc_request(self, verb, url, heads):
         """

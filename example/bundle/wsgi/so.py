@@ -17,8 +17,8 @@
 Sample SO.
 """
 
+import json
 import os
-import threading
 
 from sdk.mcn import util
 
@@ -77,8 +77,9 @@ class ServiceOrchstratorExecution(object):
             if tmp['state'] != 'CREATE_COMPLETE':
                 return 'Stack is currently being deployed...'
             else:
-                return 'All good - Stack id is: ' + str(self.stack_id) + \
-                       ' - Output is: ' + str(tmp['output'][0]['output_value'])
+
+                print 'All good - Output to return to SM is: ' + str(tmp)
+                return json.dumps(tmp)
         else:
             return 'Stack is not deployed atm.'
 
