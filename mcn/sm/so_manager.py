@@ -201,7 +201,7 @@ class SOManager():
             'Category': 'app; scheme="http://schemas.ogf.org/occi/platform#", '
             'python-2.7; scheme="http://schemas.openshift.com/template/app#", '
             'small; scheme="http://schemas.openshift.com/template/app#"',
-            'X-OCCI-Attribute': 'occi.app.name=srvinst' +
+            'X-OCCI-Attribute': 'occi.app.name=' + entity.kind.term[0:4] + 'srvinst' +
                                 ''.join(random.choice('0123456789ABCDEF') for i in range(16))
             }
 
