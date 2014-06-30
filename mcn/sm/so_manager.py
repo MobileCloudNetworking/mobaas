@@ -147,9 +147,11 @@ class SOManager():
 
             for detail in details.split(','):
                 name_val = detail.split()[1].split('=')
-                if name_val[0] != 'occi.core.id': #XXX do not overwrite this attr
-                    LOG.debug('OCCI Attribute: ' + name_val[0] + '-->' + name_val[1][1:-1])
-                    entity.attributes[name_val[0]] = name_val[1][1:-1]
+                if name_val[0] != 'occi.core.id': #do not overwrite this attr
+                    if name_val[1].startswith('"') and name_val[1].endswith('"'):
+                        name_val[1] = name_val[1][1:-1] # scrub off quotes
+                    LOG.debug('OCCI Attribute: ' + name_val[0] + '-->' + name_val[1])
+                    entity.attributes[name_val[0]] = name_val[1]
         else:
             if details['state'] == u'CREATE_FAILED':
                 entity.attributes['mcn.service.state'] = 'failed'
