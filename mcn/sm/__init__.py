@@ -52,7 +52,7 @@ def timeit(method):
         result = method(*args, **kw)
         te = time.time()
 
-        LOG.debug("%r (%r, %r) %2.2f sec" % (method.__name__, args, kw, te-ts))
+        LOG.info("Complete: %r (%r, %r) %2.2f sec" % (method.__name__, args, kw, te-ts))
         return result, te-ts
 
     return timed
@@ -65,10 +65,16 @@ def config_logger(log_level=logging.DEBUG):
     logger = logging.getLogger(__name__)
     logger.setLevel(log_level)
 
-    hdlr = logging.FileHandler('sm.log')
-    formatter = logging.Formatter(fmt='%(levelname)s %(asctime)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
-    hdlr.setFormatter(formatter)
-    logger.addHandler(hdlr)
+    if CONFIG.get('general', 'log_file', '') != '':
+        hdlr = logging.FileHandler(CONFIG.get('general', 'log_file', ''))
+        formatter = logging.Formatter(fmt='%(levelname)s %(asctime)s: %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+        hdlr.setFormatter(formatter)
+        logger.addHandler(hdlr)
+
+    if CONFIG.get('general', 'log_server', '') != '':
+        from logging.handlers import SocketHandler, DEFAULT_TCP_LOGGING_PORT
+        socketh = SocketHandler(CONFIG.get('general', 'log_server', ''), DEFAULT_TCP_LOGGING_PORT)
+        logger.addHandler(socketh)
 
     return logger
 
@@ -93,11 +99,10 @@ def get_config_file():
     return options
 
 options = get_config_file()
+CONFIG = DefaultConfigParser()
+CONFIG.read(options.config_file_path)
 
 DOING_PERFORMANCE_ANALYSIS = options.perf_timings
 
 LOG = config_logger()
 LOG.info('Using configuration file: ' + options.config_file_path)
-
-CONFIG = DefaultConfigParser()
-CONFIG.read(options.config_file_path)
