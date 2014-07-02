@@ -1,4 +1,5 @@
 # Copyright 2014 Zuercher Hochschule fuer Angewandte Wissenschaften
+# Copyright (c) 2013-2015, Intel Performance Learning Solutions Ltd, Intel Corporation.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
