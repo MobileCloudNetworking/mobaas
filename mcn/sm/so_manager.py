@@ -63,6 +63,7 @@ class SOManager():
         LOG.debug('Deploying SO Bundle...')
         self.__deploy_app(repo_uri)
 
+        # TODO make sure to set host with http(s)
         host = urlparse(repo_uri).netloc.split('@')[1]
         entity.extras['host'] = host
 
