@@ -124,3 +124,6 @@ To authentication you need to supply a tenant name and token. Do this by setting
         $ cd pyssf
         $ python ./setup.py install
 
+## Questions?
+
+Give edmo@zhaw.ch a mail
