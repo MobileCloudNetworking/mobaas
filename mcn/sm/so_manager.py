@@ -75,6 +75,7 @@ class SOManager():
         # otherwise we won't be able to hand back a working service!
         LOG.debug('Deploying the SO bundle...')
         self.__deploy_so(entity, extras)
+        LOG.debug('Deployed the SO bundle...')
 
     def __init_so(self, entity, extras):
         host = entity.extras['host']
@@ -199,13 +200,13 @@ class SOManager():
     def __create_app(self, entity, extras):
 
         # name must be A-Za-z0-9 and <=32 chars
+        app_name = entity.kind.term[0:4] + 'srvinst' + ''.join(random.choice('0123456789ABCDEF') for i in range(16))
         create_app_headers = {
             'Content-Type': 'text/occi',
             'Category': 'app; scheme="http://schemas.ogf.org/occi/platform#", '
             'python-2.7; scheme="http://schemas.openshift.com/template/app#", '
             'small; scheme="http://schemas.openshift.com/template/app#"',
-            'X-OCCI-Attribute': 'occi.app.name=' + entity.kind.term[0:4] + 'srvinst' +
-                                ''.join(random.choice('0123456789ABCDEF') for i in range(16))
+            'X-OCCI-Attribute': 'occi.app.name=' + app_name
             }
 
         #TODO requests should be placed on a queue as this is a blocking call
@@ -293,7 +294,7 @@ class SOManager():
         heads = {'Accept': 'text/occi'}
         resp = self._do_cc_request('GET', url, heads)
         locs = resp.headers.get('x-occi-location', '')
-
+        #Split on spaces, test if there is at least one key registered
         if len(locs.split()) < 1:
             LOG.debug('No SM SSH registered. Registering default SM SSH key.')
             occi_key_name, occi_key_content = self.__extract_public_key()
