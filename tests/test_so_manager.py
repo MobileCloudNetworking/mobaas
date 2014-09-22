@@ -34,14 +34,13 @@ class TestSOMConstruction(unittest.TestCase):
 # Testing Methods
 
 class TestSOMmethods(unittest.TestCase):
-
     CC_USER = 'user'
     CC_PWD = 'pwd'
     CC_NB_API = 'http://localhost:8888'
     CC_SM_BL = 'so/bundle'
     CC_SM_SSH = 'key.is.here.'
 
-
+    # Side_effect methods for mock.sm.so_manager.CONFIG
     def side_effect_config(self, *args):
         if args[0] == 'cloud_controller':
             if args[1] == 'user':
@@ -72,8 +71,11 @@ class TestSOMmethods(unittest.TestCase):
     @patch('mcn.sm.so_manager.SOManager._SOManager__extract_public_key')
     @patch('mcn.sm.so_manager.SOManager._do_cc_request')
     def test_ensure_ssh_key_absent(self, mock_cc, mock_extract):
-        #Load a key by mocking the extract_public_key call
+        # Initialization
+        # Load a key by mocking the extract_public_key call
         mock_extract.return_value = ('my_key', '123456789123456789')
+
+        # Test method
         #Check key
         self.som._SOManager__ensure_ssh_key()
         expected = [call('GET', 'http://localhost:8888/public_key/', {'Accept': 'text/occi'}),
@@ -84,40 +86,57 @@ class TestSOMmethods(unittest.TestCase):
                           'Content-Type': 'text/occi'
                          }
                     )]
+
+        # Asserts
         #Check if the CC mock has been called with the expected calls when a key is missing
         self.assertEqual(mock_cc.call_args_list, expected)
 
     @httpretty.activate
     @patch('mcn.sm.so_manager.LOG.debug')
     def test_ensure_ssh_key_present(self, mock_log):
-        #mock GET key call
+        # Initialization
+        # mock GET key call
         httpretty.register_uri(httpretty.GET, "http://localhost:8888/public_key/",
                                status=200,
                                content_type='application/json',
                                adding_headers={
                                    'x-occi-location': '123456'
                                })
+
+        # Test method
         #Check for key
         self.som._SOManager__ensure_ssh_key()
+
+        # Asserts
         #Answer when key is present is a LOG entry
         mock_log.assert_called_with('Valid SM SSH is registered with OpenShift.')
 
     def test_extract_public_key_sanity(self):
+        # Initialization
         ssh_key = 'ssh-rsa 123456 mykey'
         mock_op = mock_open(read_data=ssh_key)
+
+        # Test method (with context manager mock_open)
         with patch('mcn.sm.so_manager.open', mock_op, create=True):
             resp = self.som._SOManager__extract_public_key()
+
+        # Asserts
         self.assertEqual(resp, ('mykey', '123456'))
 
     def test_extract_public_key_dsa(self):
+        # Initialization
         ssh_key = 'ssh-dsa 123456 mykey'
         mock_op = mock_open(read_data=ssh_key)
+
+        # Test method (with context manager mock_open)
         with patch('mcn.sm.so_manager.open', mock_op, create=True):
+            # Asserts exception
             self.assertRaises(Exception, self.som._SOManager__extract_public_key)
 
     @httpretty.activate
     def test_create_app(self):
-        #Tentative Kind/Resource Creation
+        # Initialization
+        # Tentative Kind/Resource Creation
         kind = Kind('http://schemas.mobile-cloud-networking.eu/occi/sm#',
                     'myservice',
                     title='Test Service',
@@ -141,7 +160,11 @@ class TestSOMmethods(unittest.TestCase):
                                    'X-OCCI-Attribute':
                                        'occi.app.name="myse-srv-123", occi.app.repo="git@git.mcn.eu:myserv.git"'
                                })
+
+        # Test method
         repo_uri = self.som._SOManager__create_app(entity, None)
+
+        # Asserts
         self.assertEqual(repo_uri, 'git@git.mcn.eu:myserv.git')
 
     @patch('shutil.rmtree')
@@ -150,32 +173,36 @@ class TestSOMmethods(unittest.TestCase):
     @patch('tempfile.mkdtemp')
     @patch('os.system')
     def test_deploy_app(self, mock_os_system, mock_tempfile_mkdtemp, mock_dir_copy_tree, mock_copy_file, mock_rmtree):
+        # Initialization
         repo = 'git@git.mcn.eu:myserv.git'
         tmp_dir = '/tmp/tempdir'
         mock_tempfile_mkdtemp.return_value = tmp_dir
+        expected_os_system = [call(' '.join(['git', 'clone', repo, tmp_dir])),
+                              call(' '.join(['chmod', '+x', os.path.join(tmp_dir, '.openshift', 'action_hooks', '*')])),
+                              call(' '.join(['cd', tmp_dir, '&&', 'git', 'add', '-A'])),
+                              call(' '.join(
+                                  ['cd', tmp_dir, '&&', 'git', 'commit', '-m', '"deployment of SO for tenant X"',
+                                   '-a'])),
+                              call(' '.join(['cd', tmp_dir, '&&', 'git', 'push']))]
+        expected_copy_file = [
+            call('so/bundle/support/build', os.path.join(tmp_dir, '.openshift', 'action_hooks', 'build')),
+            call('so/bundle/support/pre_start_python',
+                 os.path.join(tmp_dir, '.openshift', 'action_hooks', 'pre_start_python')), ]
 
+        # Test method
         self.som._SOManager__deploy_app(repo)
 
+        # Asserts
+        mock_tempfile_mkdtemp.assert_called_once()
         mock_dir_copy_tree.assert_called_with('so/bundle', tmp_dir)
         mock_rmtree.assert_called_with(tmp_dir)
-
-        expected = [call(' '.join(['git', 'clone', repo, tmp_dir])),
-                    call(' '.join(['chmod', '+x', os.path.join(tmp_dir, '.openshift', 'action_hooks', '*')])),
-                    call(' '.join(['cd', tmp_dir, '&&', 'git', 'add', '-A'])),
-                    call(' '.join(
-                        ['cd', tmp_dir, '&&', 'git', 'commit', '-m', '"deployment of SO for tenant X"', '-a'])),
-                    call(' '.join(['cd', tmp_dir, '&&', 'git', 'push']))]
-        #Check if the CC mock has been called with the expected calls when a key is missing
-        self.assertEqual(mock_os_system.call_args_list, expected)
-
-        expected = [call('so/bundle/support/build', os.path.join(tmp_dir, '.openshift', 'action_hooks', 'build')),
-                    call('so/bundle/support/pre_start_python',
-                         os.path.join(tmp_dir, '.openshift', 'action_hooks', 'pre_start_python')), ]
-        self.assertEqual(mock_copy_file.call_args_list, expected)
+        # Check if the CC mock has been called with the expected calls when a key is missing
+        self.assertEqual(mock_os_system.call_args_list, expected_os_system)
+        self.assertEqual(mock_copy_file.call_args_list, expected_copy_file)
 
     @httpretty.activate
     def test_init_so(self):
-        #initialization
+        # initialization
         kind = Kind('http://schemas.mobile-cloud-networking.eu/occi/sm#',
                     'myservice',
                     title='Test Service',
@@ -194,17 +221,17 @@ class TestSOMmethods(unittest.TestCase):
                                status=200,
                                content_type='text/occi')
 
-        #run method
+        # Test method
         self.som._SOManager__init_so(entity, extras)
 
-        #asserts
+        # Asserts
         sent_headers = httpretty.last_request().headers
         self.assertEqual(sent_headers['X-Auth-Token'], 'test_token')
         self.assertEqual(sent_headers['X-Tenant-Name'], 'test_tenantname')
 
     @httpretty.activate
     def test_deploy_so_sanity(self):
-        #initialization
+        # initialization
         kind = Kind('http://schemas.mobile-cloud-networking.eu/occi/sm#',
                     'myservice',
                     title='Test Service',
@@ -220,17 +247,20 @@ class TestSOMmethods(unittest.TestCase):
         extras['tenant_name'] = 'test_tenantname'
         body_content = '123456789'
         httpretty.register_uri(httpretty.POST,
-                       'http://' + host + '/action=deploy',
-                       status=200,
-                       body=body_content,
-                       content_type='text/occi')
+                               'http://' + host + '/action=deploy',
+                               status=200,
+                               body=body_content,
+                               content_type='text/occi')
 
+        # Test method
         self.som._SOManager__deploy_so(entity, extras)
+
+        # Asserts
         self.assertEqual(entity.extras['stack_id'], body_content)
 
     @httpretty.activate
     def test_deploy_so_failure(self):
-        #initialization
+        # Initialization
         kind = Kind('http://schemas.mobile-cloud-networking.eu/occi/sm#',
                     'myservice',
                     title='Test Service',
@@ -246,12 +276,13 @@ class TestSOMmethods(unittest.TestCase):
         extras['tenant_name'] = 'test_tenantname'
         body_content = 'Please initialize SO with token and tenant first.'
         httpretty.register_uri(httpretty.POST,
-                       'http://' + host + '/action=deploy',
-                       status=200,
-                       body=body_content,
-                       content_type='text/occi')
+                               'http://' + host + '/action=deploy',
+                               status=200,
+                               body=body_content,
+                               content_type='text/occi')
 
-        self.assertRaises(Exception,  self.som._SOManager__deploy_so, (entity, extras))
+        # Test method and Assert exception
+        self.assertRaises(Exception, self.som._SOManager__deploy_so, (entity, extras))
 
 
     @patch('mcn.sm.LOG')
@@ -261,6 +292,7 @@ class TestSOMmethods(unittest.TestCase):
     @patch('mcn.sm.so_manager.SOManager._SOManager__init_so')
     @patch('mcn.sm.so_manager.SOManager._SOManager__deploy_so')
     def test_deploy(self, mock_deploy_so, mock_init_so, mock_deploy_app, mock_create_app, mock_ensure_ssh, mcn_log):
+        # Initialization
         kind = Kind('http://schemas.mobile-cloud-networking.eu/occi/sm#',
                     'myservice',
                     title='Test Service',
@@ -269,14 +301,14 @@ class TestSOMmethods(unittest.TestCase):
                     actions=[])
         entity = Resource('my-id', kind, None)
 
-        #repo uri is weird
+        # repo uri is weird
         repo = 'http://git@git.mcn.eu:myserv.git'
         mock_create_app.return_value = repo
 
-        #run
+        # Test method
         self.som.deploy(entity, extras={})
 
-        #asserts
+        # Asserts
         mock_deploy_app.assert_called_with(repo)
         self.assertEqual(entity.extras['host'], 'git.mcn.eu:myserv.git')
 
