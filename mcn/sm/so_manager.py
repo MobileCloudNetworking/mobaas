@@ -320,6 +320,7 @@ class SOManager():
         # build and pre_start_python comes from 'support' directory in bundle
         # XXX could be improved - e.g. could use from mako.template import Template? - use this to inject the design_uri
         LOG.debug('Adding OpenShift support files from: ' + bundle_loc + '/support')
+
         shutil.copyfile(bundle_loc+'/support/build', os.path.join(dir, '.openshift', 'action_hooks', 'build'))
         shutil.copyfile(bundle_loc+'/support/pre_start_python', os.path.join(dir, '.openshift', 'action_hooks', 'pre_start_python'))
 
