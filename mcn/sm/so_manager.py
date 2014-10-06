@@ -77,21 +77,41 @@ class SOManager():
         self.__deploy_so(entity, extras)
         LOG.debug('Deployed the SO bundle...')
 
+    # example request to the SO
+    # curl -v -X POST "http://localhost:8051/orchestrator/default?action=init" \
+    #   -H 'Content-Type: text/occi' \
+    #   -H 'Category: init; scheme="http://schemas.mobile-cloud-networking.eu/occi/service#"' \
+    #   -H 'X-Auth-Token: '$KID \
+    #   -H 'X-Tenant-Name: '$TENANT
     def __init_so(self, entity, extras):
         host = entity.extras['host']
-        url = 'http://' + host + '/action=init'
-        heads = {'X-Auth-Token': extras['token'],
-                 'X-Tenant-Name': extras['tenant_name']}
+        url = 'http://' + host + '/orchestrator/default?action=init'
+        heads = {
+            'Category': 'init; scheme="http://schemas.mobile-cloud-networking.eu/occi/service#"',
+            'Content-Type': 'text/occi',
+            'X-Auth-Token': extras['token'],
+            'X-Tenant-Name': extras['tenant_name'],
+        }
+
         LOG.debug('Initialising SO with: ' + url)
         # TODO: send `entity`'s attributes along with the call to deploy
         r = requests.post(url, headers=heads)
         r.raise_for_status()
 
+    # example request to the SO
+    # curl -v -X POST "http://localhost:8051/orchestrator/default?action=deploy" \
+    #   -H 'Content-Type: text/occi' \
+    #   -H 'Category: deploy; scheme="http://schemas.mobile-cloud-networking.eu/occi/service#"' \
+    #   -H 'X-Auth-Token: '$KID \
+    #   -H 'X-Tenant-Name: '$TENANT
     def __deploy_so(self, entity, extras):
         host = entity.extras['host']
-        url = 'http://' + host + '/action=deploy'
-        heads = {'X-Auth-Token': extras['token'],
-                 'X-Tenant-Name': extras['tenant_name']}
+        url = 'http://' + host + '/orchestrator/default?action=deploy'
+        heads = {
+            'Category': 'deploy; scheme="http://schemas.mobile-cloud-networking.eu/occi/service#"',
+            'Content-Type': 'text/occi',
+            'X-Auth-Token': extras['token'],
+            'X-Tenant-Name': extras['tenant_name']}
         LOG.debug('Deploying SO with: ' + url)
         # TODO: make call to the SO's endpoint to execute the provision command
         r = requests.post(url, headers=heads)
@@ -105,17 +125,24 @@ class SOManager():
             LOG.debug('Heat stack id of service instance: ' + r.content)
             entity.extras['stack_id'] = r.content
 
+    def __provision_so(self, entity, extras):
+        pass
+
+    # example request to the SO
+    # curl -v -X DELETE http://localhost:8051/orchestrator/default \
+    #   -H 'X-Auth-Token: '$KID \
+    #   -H 'X-Tenant-Name: '$TENANT
     @conditional_decorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def dispose(self, entity, extras):
         # 1. dispose the active SO, essentially kills the STG/ITG
         # 2. dispose the resources used to run the SO
         host = entity.extras['host']
-        url = 'http://' + host + '/action=dispose'
+        url = 'http://' + host + '/orchestrator/default'
         heads = {'X-Auth-Token': extras['token'],
                  'X-Tenant-Name': extras['tenant_name']}
 
         LOG.info('Disposing service orchestrator with: ' + url)
-        r = requests.post(url, headers=heads)
+        r = requests.delete(url, headers=heads)
         r.raise_for_status()
 
         #TODO ensure that there is no conflict between location and term!
@@ -126,16 +153,35 @@ class SOManager():
         LOG.info('Disposing service orchestrator container via CC... ' + url)
         self._do_cc_request('DELETE', url, heads)
 
+    # example request to the SO
+    # curl -v -X GET http://localhost:8051/orchestrator/default \
+    #   -H 'X-Auth-Token: '$KID \
+    #   -H 'X-Tenant-Name: '$TENANT
     @conditional_decorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def so_details(self, entity, extras):
 
-        import json
         host = entity.extras['host']
 
-        LOG.info('Getting state of service orchestrator with: ' + host + '/state')
-        r = requests.post('http://' + host + '/state')
+        LOG.info('Getting state of service orchestrator with: ' + host + '/orchestrator/default')
+        heads = {
+            'Content-Type': 'text/occi',
+            'Accept': 'text/occi',
+            'X-Auth-Token': extras['token'],
+            'X-Tenant-Name': extras['tenant_name']}
+        r = requests.get('http://' + host + '/orchestrator/default', headers=heads)
         r.raise_for_status()
-        details = json.loads(r.content)
+
+        # TODO handle failed stack creation
+
+        # TODO extract this into method
+        attrs = r.headers['x-occi-attribute'].split(', ')
+        for attr in attrs:
+            kv = attr.split('=')
+            if kv[0] != 'occi.core.id':
+                if kv[1].startswith('"') and kv[1].endswith('"'):
+                    kv[1] = kv[1][1:-1]  # scrub off quotes
+                entity.attributes[kv[0]] = kv[1]
+                LOG.debug('OCCI Attribute: ' + kv[0] + ' --> ' + kv[1])
 
         #service state model:
         #  - init
@@ -145,33 +191,33 @@ class SOManager():
         #  - failed
 
         #XXX this is a hack, will be removed with OCCI SO support
-        if (type(details) == type('str')) or (type(details) == type(u'unicode')):
-            LOG.debug('content:\n' + details)
-
-            for detail in details.split(','):
-                name_val = detail.split()[1].split('=')
-                if name_val[0] != 'occi.core.id': #do not overwrite this attr
-                    if name_val[1].startswith('"') and name_val[1].endswith('"'):
-                        name_val[1] = name_val[1][1:-1] # scrub off quotes
-                    LOG.debug('OCCI Attribute: ' + name_val[0] + '-->' + name_val[1])
-                    entity.attributes[name_val[0]] = name_val[1]
-        else:
-            if details['state'] == u'CREATE_FAILED':
-                entity.attributes['mcn.service.state'] = 'failed'
-                LOG.error('Stack provisioning failed for: ' +
-                          entity.extras['stack_id'])
-            if details['state'] == u'CREATE_IN_PROGRESS':
-                entity.attributes['mcn.service.state'] = 'creating'
-                LOG.info('Stack creating...' + entity.extras['stack_id'])
-            else:
-                LOG.debug('Stack state: ' + details['state'])
-                entity.attributes['mcn.service.state'] = 'active'
-
-                #TODO ensure only the Kind-defined attributes are set
-                for output_kv in details['output']:
-                    LOG.debug('Setting OCCI attrib: ' + str(output_kv['output_key']) +
-                              ' : ' + str(output_kv['output_value']))
-                    entity.attributes[output_kv['output_key']] = output_kv['output_value']
+        # if (type(details) == type('str')) or (type(details) == type(u'unicode')):
+        #     LOG.debug('content:\n' + details)
+        #
+        #     for detail in details.split(','):
+        #         name_val = detail.split()[1].split('=')
+        #         if name_val[0] != 'occi.core.id':  #do not overwrite this attr
+        #             if name_val[1].startswith('"') and name_val[1].endswith('"'):
+        #                 name_val[1] = name_val[1][1:-1] # scrub off quotes
+        #             LOG.debug('OCCI Attribute: ' + name_val[0] + '-->' + name_val[1])
+        #             entity.attributes[name_val[0]] = name_val[1]
+        # else:
+        #     if details['state'] == u'CREATE_FAILED':
+        #         entity.attributes['mcn.service.state'] = 'failed'
+        #         LOG.error('Stack provisioning failed for: ' +
+        #                   entity.extras['stack_id'])
+        #     if details['state'] == u'CREATE_IN_PROGRESS':
+        #         entity.attributes['mcn.service.state'] = 'creating'
+        #         LOG.info('Stack creating...' + entity.extras['stack_id'])
+        #     else:
+        #         LOG.debug('Stack state: ' + details['state'])
+        #         entity.attributes['mcn.service.state'] = 'active'
+        #
+        #         #TODO ensure only the Kind-defined attributes are set
+        #         for output_kv in details['output']:
+        #             LOG.debug('Setting OCCI attrib: ' + str(output_kv['output_key']) +
+        #                       ' : ' + str(output_kv['output_value']))
+        #             entity.attributes[output_kv['output_key']] = output_kv['output_value']
 
     def _do_cc_request(self, verb, url, heads):
         """
@@ -275,6 +321,7 @@ class SOManager():
         # build and pre_start_python comes from 'support' directory in bundle
         # XXX could be improved - e.g. could use from mako.template import Template? - use this to inject the design_uri
         LOG.debug('Adding OpenShift support files from: ' + bundle_loc + '/support')
+
         shutil.copyfile(bundle_loc+'/support/build', os.path.join(dir, '.openshift', 'action_hooks', 'build'))
         shutil.copyfile(bundle_loc+'/support/pre_start_python', os.path.join(dir, '.openshift', 'action_hooks', 'pre_start_python'))
 
@@ -290,6 +337,7 @@ class SOManager():
         shutil.rmtree(dir)
 
     def __ensure_ssh_key(self):
+        #TODO support inspection of all ssh key content?
         url = self.nburl + '/public_key/'
         heads = {'Accept': 'text/occi'}
         resp = self._do_cc_request('GET', url, heads)

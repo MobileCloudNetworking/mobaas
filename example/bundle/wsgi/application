@@ -1,7 +1,6 @@
 #!/usr/bin/python
 
 #   Copyright (c) 2013-2015, Intel Performance Learning Solutions Ltd, Intel Corporation.
-#   Copyright 2014 Zuercher Hochschule fuer Angewandte Wissenschaften
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -18,9 +17,9 @@
 
 import os
 
+virtenv = os.environ['OPENSHIFT_PYTHON_DIR'] + '/virtenv/'
+virtualenv = os.path.join(virtenv, 'bin/activate_this.py')
 try:
-    virtenv = os.environ.get('OPENSHIFT_PYTHON_DIR', '.') + '/virtenv/'
-    virtualenv = os.path.join(virtenv, 'bin/activate_this.py')
     execfile(virtualenv, dict(__file__=virtualenv))
 except IOError:
     pass
@@ -29,76 +28,61 @@ except IOError:
 # line, it's possible required libraries won't be in your searchable path
 #
 
-from sdk.mcn import deployment, util
-
 import so
 
+from sdk.mcn import occi_ext
 
-class Application:
-    """
-    # TODO: replace with OCCI wsgi app. https://git.mobile-cloud-networking.eu/cloudcontroller/mcn_cc_sdk/tree/master/misc/new_so/wsgi
-    """
+
+class MyBackend(occi_ext.Backend):
 
     def __init__(self):
         self.so = None
-
-    def __call__(self, environ, start_response):
-        ctype = 'text/plain'
-
-        if environ['PATH_INFO'] == '/action=init' \
-                and environ['REQUEST_METHOD'] == 'POST':
-            token = environ.get('HTTP_X_AUTH_TOKEN', '')
-            tenant_name = environ.get('HTTP_X_TENANT_NAME', '')
-            self.so = so.ServiceOrchstrator(token, tenant_name)
-            if self.so is None:
-                response_body = "Failed to create SO"
-            else:
-                response_body = "OK"
-
-        elif environ['PATH_INFO'] == '/action=deploy' \
-                and environ['REQUEST_METHOD'] == 'POST':
-            if self.so is None:
-                response_body = 'Please initialize SO with token and tenant first.'
-            else:
-                self.so.so_e.deploy()
-                response_body = str(self.so.so_e.stack_id)
-
-        elif environ['PATH_INFO'] == '/action=dispose' \
-                and environ['REQUEST_METHOD'] == 'POST':
-            if self.so is None:
-                response_body = 'Please initialize SO with token and tenant first.'
-            else:
-                self.so.so_e.dispose()
-                response_body = "OK"
-
-        elif environ['PATH_INFO'] == '/state':
-            if self.so is None:
-                response_body = repr(environ)
-            else:
-                response_body = self.so.so_e.state()
-
+        
+    def retrieve(self, entity, extras):
+        # if init is the next action, no initialisation has begun
+        if occi_ext.INIT_ACTION in entity.actions:
+            entity.attributes['occi.mcn.stack.state'] = 'uninitialized'
+            entity.attributes['occi.mcn.stack.id'] = ''
+        # we deployed and possibly provisioned
         else:
-            if self.so is None:
-                response_body = 'Please initialize SO with token first.'
-            else:
-                ctype = 'text/html'
-                response_body = "<a href=\"/state\">Show State</a><hr />"
-                response_body += "<form action=\"/action=deploy\" " \
-                                 "method=\"post\">" \
-                                 "<input type=\"submit\" value=\"Deploy\">" \
-                                 "</form>"
-                response_body += "<form action=\"/action=dispose\" " \
-                                 "method=\"post\">" \
-                                 "<input type=\"submit\" value=\"Dispose\">" \
-                                 "</form>"
+            state, output, stack_id = self.so.so_e.state()
+            entity.attributes['occi.mcn.stack.state'] = state
+            entity.attributes['occi.mcn.stack.id'] = stack_id
+            # to return SO specific attributes
+            for kv in output:
+                entity.attributes[kv['output_key']] = kv['output_value']
 
-        status = '200 OK'
-        response_headers = [('Content-Type', ctype), ('Content-Length',
-                                                      str(len(response_body)))]
-        start_response(status, response_headers)
-        return [response_body]
+    def update(self, old, new, extras):
+        pass
+        # TODO: attributes would need to be defined by a mixin.
+        # old.attributes.update(new.attributes)
 
-application = Application()
+    def delete(self, entity, extras):
+        if occi_ext.INIT_ACTION not in entity.actions:
+            self.so.so_e.dispose()
+            entity.actions = []
+        else:
+            # Nothing to do...
+            pass
+
+    def init_me(self, entity, attributes, extras):
+        # XXX: This method will disappear soon!
+        token = extras['token']
+        tenant = extras['tenant_name']
+        self.so = so.ServiceOrchstrator(token, tenant)
+        entity.actions = [occi_ext.DEPLOY_ACTION]
+
+    def deploy_me(self, entity, attributes, extras):
+        self.so.so_e.deploy()
+        # only available action is now provision
+        entity.actions = [occi_ext.PROVISION_ACTION]
+
+    def provision_me(self, entity, attributes, extras):
+        self.so.provision()
+        # no more actions available in this state
+        entity.actions = []
+
+application = occi_ext.Application(MyBackend())
 
 #
 # Below for testing only

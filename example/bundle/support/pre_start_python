@@ -2,4 +2,4 @@
 
 echo "Setting DESIGN_URI environment variable"
 
-export DESIGN_URI='http://160.85.4.224:35357/v2.0'
+export DESIGN_URI='http://bart.cloudcomplab.ch:35357/v2.0'
