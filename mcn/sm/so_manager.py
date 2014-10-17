@@ -68,7 +68,7 @@ class SOManager():
         host = urlparse(repo_uri).netloc.split('@')[1]
         entity.extras['host'] = host
 
-        LOG.debug('Initialising the SO...')
+        LOG.debug('Creating the SO...')
         self.__init_so(entity, extras)
 
         # Deployment is done without any control by the client...
@@ -77,14 +77,14 @@ class SOManager():
         self.__deploy_so(entity, extras)
 
     # example request to the SO
-    # curl -v -X POST "http://localhost:8051/orchestrator/default?action=init" \
+    # curl -v -X PUT http://localhost:8051/orchestrator/default \
     #   -H 'Content-Type: text/occi' \
-    #   -H 'Category: init; scheme="http://schemas.mobile-cloud-networking.eu/occi/service#"' \
+    #   -H 'Category: orchestrator; scheme="http://schemas.mobile-cloud-networking.eu/occi/service#"' \
     #   -H 'X-Auth-Token: '$KID \
     #   -H 'X-Tenant-Name: '$TENANT
     def __init_so(self, entity, extras):
         host = entity.extras['host']
-        url = 'http://' + host + '/orchestrator/default?action=init'
+        url = 'http://' + host + '/orchestrator/default'
         heads = {
             'Category': 'init; scheme="http://schemas.mobile-cloud-networking.eu/occi/service#"',
             'Content-Type': 'text/occi',
@@ -94,11 +94,11 @@ class SOManager():
 
         LOG.debug('Initialising SO with: ' + url)
         # TODO: send `entity`'s attributes along with the call to deploy
-        r = requests.post(url, headers=heads)
+        r = requests.put(url, headers=heads)
         r.raise_for_status()
 
     # example request to the SO
-    # curl -v -X POST "http://localhost:8051/orchestrator/default?action=deploy" \
+    # curl -v -X POST http://localhost:8051/orchestrator/default?action=deploy \
     #   -H 'Content-Type: text/occi' \
     #   -H 'Category: deploy; scheme="http://schemas.mobile-cloud-networking.eu/occi/service#"' \
     #   -H 'X-Auth-Token: '$KID \
