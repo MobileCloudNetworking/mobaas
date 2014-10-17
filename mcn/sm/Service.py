@@ -25,6 +25,8 @@ from occi.registry import NonePersistentRegistry
 from mcn.sm.backends import ServiceBackend
 from mcn.sm import CONFIG
 from mcn.sm import LOG
+from sdk.mcn import util
+from keystoneclient.v2_0 import client
 
 
 class SMRegistry(NonePersistentRegistry):
@@ -80,9 +82,6 @@ class Service():
     def register_service(self, srv_type):
         # XXX: following code should either a) solely use SDK or b) not use SDK ata ll and go to keystone directl.y
         # if not in keystone service regsitry, then register the service and its endpoints
-        from sdk.mcn import util
-        from keystoneclient.v2_0 import client
-        # XXX: move import up.
 
         design_uri = CONFIG.get('service_manager', 'design_uri', '')
         if design_uri == '':
@@ -117,7 +116,7 @@ class Service():
             internalurl = adminurl = publicurl = service_endpoint
 
             ep = keystone.endpoints.create(region, s.id, publicurl, adminurl, internalurl)
-            LOG.debug('Service is now registered with keystone: ID: ' + ep.id + ' Region: ' + ep.region + ' Public URL: ' + ep.publicurl)
+            LOG.debug('Service is now registered with keystone: ID: ' + ep.id + ' Region: ' + ep.region + ' Public URL: ' + ep.publicurl + ' Service ID: '+s.id)
         else:
             LOG.debug('Service is already registered with keystone. Service endpoint is: ' + srv_ep)
 

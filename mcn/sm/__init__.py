@@ -18,6 +18,7 @@ __author__ = 'andy'
 import ConfigParser
 import logging
 import time
+import os
 
 from optparse import OptionParser
 
@@ -98,11 +99,17 @@ def get_config_file():
 
     return options
 
-options = get_config_file()
 CONFIG = DefaultConfigParser()
-CONFIG.read(options.config_file_path)
 
-DOING_PERFORMANCE_ANALYSIS = options.perf_timings
+if 'SM_CONFIG_PATH' in os.environ and 'SM_TIMEIT' in os.environ:
+    config_file_path = os.getenv('SM_CONFIG_PATH')
+    DOING_PERFORMANCE_ANALYSIS = os.getenv('SM_TIMEIT')
+    CONFIG.read(config_file_path)
+else:
+    options = get_config_file()
+    config_file_path = options.config_file_path
+    CONFIG.read(config_file_path)
+    DOING_PERFORMANCE_ANALYSIS = options.perf_timings
 
 LOG = config_logger()
-LOG.info('Using configuration file: ' + options.config_file_path)
+LOG.info('Using configuration file: ' + config_file_path)
