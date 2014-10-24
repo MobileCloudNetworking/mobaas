@@ -1,8 +1,15 @@
 # MCN Service Manger
 
-This is the MCN Service Manager
+This is the MCN Service Manager.
 
-An example and naive example of an EPC Service Manager can be found in ./example
+To checkout the code and also setup the example SO, do the following:
+
+    $ git clone git@git.mobile-cloud-networking.eu:cloudcontroller/mcn_sm.git
+    $ cd mcn_sm
+    $ git submodule init
+    $ git submodule update
+
+An example and naive example of an EPC Service Manager can be found in `./example`
 For service manager implementers they simply need to follow this example for their own service.
 
 You can run this example by `python ./example/demo_service_manager.py`
@@ -41,6 +48,8 @@ Please see the configuration file `etc/sm.cfg` for further parameter description
 This service manager framework assumes that the bundle supplied will be deployed using git.
 
 ### Configuration of demo SO bundle
+
+The demo SO bundle comes from: https://git.mobile-cloud-networking.eu/cloudcontroller/mcn_sample_so It is added as a submodule and can be retreived using the above instructions.
 
 There are some support files that the SM and the CC rely upon. These support files must be stored under the root of
 your SO bundle in a folder named `support`.
