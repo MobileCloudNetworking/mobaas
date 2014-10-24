@@ -123,8 +123,7 @@ class SOManager():
             entity.attributes['mcn.service.state'] = 'failed'
             raise Exception('Error deploying the SO')
         else:
-            LOG.debug('Heat stack id of service instance: ' + r.content)
-            entity.extras['stack_id'] = r.content
+            LOG.debug('SO Deployed ')
 
     def __provision_so(self, entity, extras):
         pass
@@ -190,35 +189,6 @@ class SOManager():
         #  - active (entered into runtime ops)
         #  - destroying
         #  - failed
-
-        #XXX this is a hack, will be removed with OCCI SO support
-        # if (type(details) == type('str')) or (type(details) == type(u'unicode')):
-        #     LOG.debug('content:\n' + details)
-        #
-        #     for detail in details.split(','):
-        #         name_val = detail.split()[1].split('=')
-        #         if name_val[0] != 'occi.core.id':  #do not overwrite this attr
-        #             if name_val[1].startswith('"') and name_val[1].endswith('"'):
-        #                 name_val[1] = name_val[1][1:-1] # scrub off quotes
-        #             LOG.debug('OCCI Attribute: ' + name_val[0] + '-->' + name_val[1])
-        #             entity.attributes[name_val[0]] = name_val[1]
-        # else:
-        #     if details['state'] == u'CREATE_FAILED':
-        #         entity.attributes['mcn.service.state'] = 'failed'
-        #         LOG.error('Stack provisioning failed for: ' +
-        #                   entity.extras['stack_id'])
-        #     if details['state'] == u'CREATE_IN_PROGRESS':
-        #         entity.attributes['mcn.service.state'] = 'creating'
-        #         LOG.info('Stack creating...' + entity.extras['stack_id'])
-        #     else:
-        #         LOG.debug('Stack state: ' + details['state'])
-        #         entity.attributes['mcn.service.state'] = 'active'
-        #
-        #         #TODO ensure only the Kind-defined attributes are set
-        #         for output_kv in details['output']:
-        #             LOG.debug('Setting OCCI attrib: ' + str(output_kv['output_key']) +
-        #                       ' : ' + str(output_kv['output_value']))
-        #             entity.attributes[output_kv['output_key']] = output_kv['output_value']
 
     def _do_cc_request(self, verb, url, heads):
         """
