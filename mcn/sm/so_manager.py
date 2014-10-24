@@ -87,7 +87,7 @@ class SOManager():
         host = entity.extras['host']
         url = 'http://' + host + '/orchestrator/default'
         heads = {
-            'Category': 'init; scheme="http://schemas.mobile-cloud-networking.eu/occi/service#"',
+            'Category': 'orchestrator; scheme="http://schemas.mobile-cloud-networking.eu/occi/service#"',
             'Content-Type': 'text/occi',
             'X-Auth-Token': extras['token'],
             'X-Tenant-Name': extras['tenant_name'],
