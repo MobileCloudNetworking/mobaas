@@ -106,7 +106,8 @@ class SOManager():
     #   -H 'X-Tenant-Name: '$TENANT
     def __deploy_so(self, entity, extras):
         host = entity.extras['host']
-        url = 'http://' + host + '/orchestrator/default?action=deploy'
+        url = 'http://' + host + '/orchestrator/default'
+        params = {'action': 'deploy'}
         heads = {
             'Category': 'deploy; scheme="http://schemas.mobile-cloud-networking.eu/occi/service#"',
             'Content-Type': 'text/occi',
@@ -114,7 +115,7 @@ class SOManager():
             'X-Tenant-Name': extras['tenant_name']}
         LOG.debug('Deploying SO with: ' + url)
         # TODO: make call to the SO's endpoint to execute the provision command
-        r = requests.post(url, headers=heads)
+        r = requests.post(url, headers=heads, params=params)
         r.raise_for_status()
 
         # Store the stack id. This should not be shown to the EEU.
