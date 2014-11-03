@@ -45,11 +45,11 @@ class CreateSOProcess(multiprocessing.Process):
             self.nburl = self.nburl[0:-1]
         LOG.info('CloudController Northbound API: ' + self.nburl)
 
+    @conditional_decorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def run(self):
         super(CreateSOProcess, self).run()
         self.__create_so()
 
-    @conditional_decorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def __create_so(self):
         LOG.debug('Ensuring SM SSH Key...')
         self.__ensure_ssh_key()
@@ -60,7 +60,7 @@ class CreateSOProcess(multiprocessing.Process):
 
         #send back the repo URI and new resource id
         q = self.extras['ret_q']
-        ret_val={'repo_uri': repo_uri, 'identifier': self.entity.identifier}
+        ret_val={'repo_uri': repo_uri, 'entity': self.entity}
         q.put(ret_val)
 
     def __create_app(self):
@@ -86,7 +86,6 @@ class CreateSOProcess(multiprocessing.Process):
         app_uri_path = urlparse(loc).path
         LOG.debug('SO container created: ' + app_uri_path)
 
-        #TODO need to fix this in the OCCI web app context!
         LOG.debug('Updating OCCI entity.identifier from: ' + self.entity.identifier + ' to: '
                   + app_uri_path.replace('/app/', self.entity.kind.location))
         self.entity.identifier = app_uri_path.replace('/app/', self.entity.kind.location)
@@ -167,6 +166,7 @@ class DeploySOProcess(multiprocessing.Process):
         if os.system('which git') != 0:
             raise EnvironmentError('Git is not available.')
 
+    @conditional_decorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def run(self):
         super(DeploySOProcess, self).run()
         self.deploy_so()
@@ -252,7 +252,7 @@ class DeploySOProcess(multiprocessing.Process):
         LOG.debug('Bundle to add to repo: ' + bundle_loc)
         dir_util.copy_tree(bundle_loc, dir)
 
-        self.__add_openshift_files(bundle_loc)
+        self.__add_openshift_files(bundle_loc, dir)
 
         # add & push to OpenShift
         os.system(' '.join(['cd', dir, '&&', 'git', 'add', '-A']))
@@ -262,7 +262,7 @@ class DeploySOProcess(multiprocessing.Process):
 
         shutil.rmtree(dir)
 
-    def __add_openshift_files(self, bundle_loc):
+    def __add_openshift_files(self, bundle_loc, dir):
         # put OpenShift stuff in place
         # build and pre_start_python comes from 'support' directory in bundle
         LOG.debug('Adding OpenShift support files from: ' + bundle_loc + '/support')

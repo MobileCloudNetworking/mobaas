@@ -52,9 +52,10 @@ class ServiceBackend(KindBackend, ActionBackend):
         tcp.start()
         tcp.join()
 
-        # update the newly created container's IDs
         ret_vals = self.ret_q.get()
-        entity.identifier = ret_vals['identifier']
+        t_entity = ret_vals['entity']
+        entity.attributes = t_entity.attributes
+        entity.identifier = t_entity.identifier
 
         # pass the repo URI to the deploy process, no join() needed
         entity.extras = {'repo_uri': ret_vals['repo_uri']}
