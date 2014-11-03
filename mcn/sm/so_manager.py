@@ -17,6 +17,7 @@
 __author__ = 'andy'
 
 from distutils import dir_util
+from mako.template import Template
 import multiprocessing
 import os
 import random
@@ -254,11 +255,22 @@ class DeploySOProcess(multiprocessing.Process):
 
         # put OpenShift stuff in place
         # build and pre_start_python comes from 'support' directory in bundle
-        # XXX could be improved - e.g. could use from mako.template import Template? - use this to inject the design_uri
         LOG.debug('Adding OpenShift support files from: ' + bundle_loc + '/support')
 
+        # 1. Write build
+        LOG.debug('Writing build to: ' + os.path.join(dir, '.openshift', 'action_hooks', 'build'))
         shutil.copyfile(bundle_loc+'/support/build', os.path.join(dir, '.openshift', 'action_hooks', 'build'))
-        shutil.copyfile(bundle_loc+'/support/pre_start_python', os.path.join(dir, '.openshift', 'action_hooks', 'pre_start_python'))
+
+        # 1. Write pre_start_python
+        LOG.debug('Writing pre_start_python to: ' + os.path.join(dir, '.openshift', 'action_hooks', 'pre_start_python'))
+
+        pre_start_template = Template(filename=bundle_loc+'/support/pre_start_python')
+        design_uri = CONFIG.get('service_manager', 'design_uri', '')
+        content = pre_start_template.render(design_uri=design_uri)
+        LOG.debug('Writing pre_start_python content as: ' + content)
+        pre_start_file = open(os.path.join(dir, '.openshift', 'action_hooks', 'pre_start_python'), "w")
+        pre_start_file.write(content)
+        pre_start_file.close()
 
         os.system(' '.join(['chmod', '+x', os.path.join(dir, '.openshift', 'action_hooks', '*')]))
 
@@ -272,6 +284,7 @@ class DeploySOProcess(multiprocessing.Process):
 
 
 class ProvisionSOProcess(multiprocessing.Process):
+    # TODO
     pass
 
 
@@ -283,6 +296,7 @@ class RetrieveSOProcess(multiprocessing.Process):
         repo_uri = self.entity.extras['repo_uri']
         self.host = urlparse(repo_uri).netloc.split('@')[1]
 
+    @conditional_decorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def run(self):
         super(RetrieveSOProcess, self).run()
         self.so_details()
@@ -291,7 +305,6 @@ class RetrieveSOProcess(multiprocessing.Process):
     # curl -v -X GET http://localhost:8051/orchestrator/default \
     #   -H 'X-Auth-Token: '$KID \
     #   -H 'X-Tenant-Name: '$TENANT
-    @conditional_decorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def so_details(self):
         LOG.info('Getting state of service orchestrator with: ' + self.host + '/orchestrator/default')
         heads = {
@@ -323,6 +336,7 @@ class DestroySOProcess(multiprocessing.Process):
         repo_uri = self.entity.extras['repo_uri']
         self.host = urlparse(repo_uri).netloc.split('@')[1]
 
+    @conditional_decorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def run(self):
         super(DestroySOProcess, self).run()
         self.dispose()
@@ -331,7 +345,6 @@ class DestroySOProcess(multiprocessing.Process):
     # curl -v -X DELETE http://localhost:8051/orchestrator/default \
     #   -H 'X-Auth-Token: '$KID \
     #   -H 'X-Tenant-Name: '$TENANT
-    @conditional_decorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def dispose(self):
         # 1. dispose the active SO, essentially kills the STG/ITG
         # 2. dispose the resources used to run the SO
@@ -341,9 +354,7 @@ class DestroySOProcess(multiprocessing.Process):
 
         LOG.info('Disposing service orchestrator with: ' + url)
         r = requests.delete(url, headers=heads)
-        r.raise_for_status()
-
-        #TODO ensure that there is no conflict between location and term!
+        r.raise_for_status()  # TODO if error report verbosely and perform recovery
 
         url = self.nburl + self.entity.identifier.replace('/' + self.entity.kind.term + '/', '/app/')
         heads = {'Content-Type': 'text/occi',
@@ -373,5 +384,5 @@ def _do_cc_request(verb, url, heads):
     else:
         raise Exception('Unknown HTTP verb.')
 
-    r.raise_for_status()
+    r.raise_for_status() # TODO if error report verbosely and perform recovery
     return r

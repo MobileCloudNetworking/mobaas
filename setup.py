@@ -22,5 +22,5 @@ setup(name='mcn_sm',
       url='http://cloudcomp.ch',
       license='Apache 2.0',
       packages=['mcn', 'mcn.sm'],
-      requires=['pyssf', 'requests']
+      requires=['pyssf', 'requests', 'mako']
      )

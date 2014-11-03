@@ -1,6 +1,6 @@
 import unittest
 from occi.backend import ActionBackend, KindBackend
-from mcn.sm.Service import Service, MCNApplication
+from mcn.sm.service import Service, MCNApplication
 from mcn.sm.backends import ServiceBackend
 from mock import patch
 from mcn.sm.so_manager import SOManager
