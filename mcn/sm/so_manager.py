@@ -239,7 +239,6 @@ class DeploySOProcess(multiprocessing.Process):
             - a git repo is returned
             - the bundle is not managed by git
         """
-
         # create temp dir...and clone the remote repo provided by OpS
         dir = tempfile.mkdtemp()
         LOG.debug('Cloning git repository: ' + repo + ' to: ' + dir)
