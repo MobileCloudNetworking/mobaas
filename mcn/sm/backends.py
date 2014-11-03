@@ -15,9 +15,21 @@
 
 __author__ = 'andy'
 
+import logging
+import multiprocessing
 from occi.backend import ActionBackend, KindBackend
 
-from mcn.sm.so_manager import SOManager
+from mcn.sm.so_manager import CreateSOProcess
+from mcn.sm.so_manager import DeploySOProcess
+from mcn.sm.so_manager import RetrieveSOProcess
+from mcn.sm.so_manager import DestroySOProcess
+
+#service state model:
+#  - init
+#  - creating (deploy/provisioning)
+#  - active (entered into runtime ops)
+#  - destroying
+#  - failed
 
 
 class ServiceBackend(KindBackend, ActionBackend):
@@ -26,15 +38,43 @@ class ServiceBackend(KindBackend, ActionBackend):
     '''
 
     def __init__(self):
-        self.som = SOManager()
+        multiprocessing.log_to_stderr(logging.DEBUG)
+        self.ret_q = multiprocessing.Queue()
 
     def create(self, entity, extras):
         super(ServiceBackend, self).create(entity, extras)
-        self.som.deploy(entity, extras)
+
+        # set the return value queue
+        extras['ret_q'] = self.ret_q
+
+        # run the process
+        tcp = CreateSOProcess(args=(entity, extras, ))
+        tcp.start()
+        tcp.join()
+
+        # update the newly created container's IDs
+        ret_vals = self.ret_q.get()
+        entity.identifier = ret_vals['identifier']
+
+        # pass the repo URI to the deploy process, no join() needed
+        entity.extras = {'repo_uri': ret_vals['repo_uri']}
+        dp = DeploySOProcess(args=(entity, extras, ))
+        dp.start()
 
     def retrieve(self, entity, extras):
         super(ServiceBackend, self).retrieve(entity, extras)
-        self.som.so_details(entity, extras)
+
+        # set the return value queue
+        extras['ret_q'] = self.ret_q
+
+        # run the process
+        rp = RetrieveSOProcess(args=(entity, extras, ))
+        rp.start()
+        rp.join()
+
+        # set the entity's attributes
+        entity.attributes = extras['ret_q'].get()
+        print entity.attributes
 
     def update(self, old, new, extras):
         raise NotImplementedError()
@@ -44,7 +84,9 @@ class ServiceBackend(KindBackend, ActionBackend):
 
     def delete(self, entity, extras):
         super(ServiceBackend, self).delete(entity, extras)
-        self.som.dispose(entity, extras)
+        dp = DestroySOProcess(args=(entity, extras, ))
+        # we don't have to block here => no join()
+        dp.start()
 
     # currently not exposed on the kind
     def action(self, entity, action, attributes, extras):

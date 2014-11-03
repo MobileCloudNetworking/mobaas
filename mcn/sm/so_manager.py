@@ -17,6 +17,7 @@
 __author__ = 'andy'
 
 from distutils import dir_util
+import multiprocessing
 import os
 import random
 import requests
@@ -28,196 +29,43 @@ from mcn.sm import CONFIG
 from mcn.sm import LOG
 from mcn.sm import timeit, conditional_decorator, DOING_PERFORMANCE_ANALYSIS
 
-# XXX: all URLs are hardcoded to 'http'
 
-class SOManager():
+HTTP = 'http://'
 
-    def __init__(self):
+
+class CreateSOProcess(multiprocessing.Process):
+
+    def __init__(self, group=None, target=None, name=None, args=(), kwargs={}):
+        super(CreateSOProcess, self).__init__(group, target, name, args, kwargs)
+        self.entity = args[0]
+        self.extras = args[1]
         self.nburl = CONFIG.get('cloud_controller', 'nb_api', '')
-        if self.nburl == '':
-            # XXX throw specific exception
-            raise Exception('No nb_api paramter specified in sm.cfg')
-
-        #scrub off any trailing slash
         if self.nburl[-1] == '/':
             self.nburl = self.nburl[0:-1]
-
         LOG.info('CloudController Northbound API: ' + self.nburl)
 
-        if os.system('which git') != 0:
-            raise EnvironmentError('Git is not available.')
+    def run(self):
+        super(CreateSOProcess, self).run()
+        self.__create_so()
 
     @conditional_decorator(timeit, DOING_PERFORMANCE_ANALYSIS)
-    def deploy(self, entity, extras):
-
-        entity.extras = {}
-
+    def __create_so(self):
         LOG.debug('Ensuring SM SSH Key...')
         self.__ensure_ssh_key()
 
         # create an app for the new SO instance
         LOG.debug('Creating SO container...')
-        repo_uri = self.__create_app(entity, extras)
+        repo_uri = self.__create_app()
 
-        # get the code of the bundle and push it to the git facilities
-        # offered by OpenShift
-        LOG.debug('Deploying SO Bundle...')
-        self.__deploy_app(repo_uri)
+        #send back the repo URI and new resource id
+        q = self.extras['ret_q']
+        ret_val={'repo_uri': repo_uri, 'identifier': self.entity.identifier}
+        q.put(ret_val)
 
-        # TODO make sure to set host with http(s)
-        host = urlparse(repo_uri).netloc.split('@')[1]
-        entity.extras['host'] = host
-
-        LOG.debug('Creating the SO...')
-        self.__init_so(entity, extras)
-
-        # Deployment is done without any control by the client...
-        # otherwise we won't be able to hand back a working service!
-        LOG.debug('Deploying the SO bundle...')
-        self.__deploy_so(entity, extras)
-        LOG.debug('Deployed the SO bundle...')
-
-    # example request to the SO
-    # curl -v -X PUT http://localhost:8051/orchestrator/default \
-    #   -H 'Content-Type: text/occi' \
-    #   -H 'Category: orchestrator; scheme="http://schemas.mobile-cloud-networking.eu/occi/service#"' \
-    #   -H 'X-Auth-Token: '$KID \
-    #   -H 'X-Tenant-Name: '$TENANT
-    def __init_so(self, entity, extras):
-        host = entity.extras['host']
-        url = 'http://' + host + '/orchestrator/default'
-        heads = {
-            'Category': 'orchestrator; scheme="http://schemas.mobile-cloud-networking.eu/occi/service#"',
-            'Content-Type': 'text/occi',
-            'X-Auth-Token': extras['token'],
-            'X-Tenant-Name': extras['tenant_name'],
-        }
-
-        LOG.debug('Initialising SO with: ' + url)
-        # TODO: send `entity`'s attributes along with the call to deploy
-        r = requests.put(url, headers=heads)
-        r.raise_for_status()
-
-    # example request to the SO
-    # curl -v -X POST http://localhost:8051/orchestrator/default?action=deploy \
-    #   -H 'Content-Type: text/occi' \
-    #   -H 'Category: deploy; scheme="http://schemas.mobile-cloud-networking.eu/occi/service#"' \
-    #   -H 'X-Auth-Token: '$KID \
-    #   -H 'X-Tenant-Name: '$TENANT
-    def __deploy_so(self, entity, extras):
-        host = entity.extras['host']
-        url = 'http://' + host + '/orchestrator/default'
-        params = {'action': 'deploy'}
-        heads = {
-            'Category': 'deploy; scheme="http://schemas.mobile-cloud-networking.eu/occi/service#"',
-            'Content-Type': 'text/occi',
-            'X-Auth-Token': extras['token'],
-            'X-Tenant-Name': extras['tenant_name']}
-        LOG.debug('Deploying SO with: ' + url)
-        # TODO: make call to the SO's endpoint to execute the provision command
-        r = requests.post(url, headers=heads, params=params)
-        r.raise_for_status()
-
-        # Store the stack id. This should not be shown to the EEU.
-        if r.content == 'Please initialize SO with token and tenant first.':
-            entity.attributes['mcn.service.state'] = 'failed'
-            raise Exception('Error deploying the SO')
-        else:
-            LOG.debug('SO Deployed ')
-
-    def __provision_so(self, entity, extras):
-        pass
-
-    # example request to the SO
-    # curl -v -X DELETE http://localhost:8051/orchestrator/default \
-    #   -H 'X-Auth-Token: '$KID \
-    #   -H 'X-Tenant-Name: '$TENANT
-    @conditional_decorator(timeit, DOING_PERFORMANCE_ANALYSIS)
-    def dispose(self, entity, extras):
-        # 1. dispose the active SO, essentially kills the STG/ITG
-        # 2. dispose the resources used to run the SO
-        host = entity.extras['host']
-        url = 'http://' + host + '/orchestrator/default'
-        heads = {'X-Auth-Token': extras['token'],
-                 'X-Tenant-Name': extras['tenant_name']}
-
-        LOG.info('Disposing service orchestrator with: ' + url)
-        r = requests.delete(url, headers=heads)
-        r.raise_for_status()
-
-        #TODO ensure that there is no conflict between location and term!
-        url = self.nburl + entity.identifier.replace('/' + entity.kind.term + '/', '/app/')
-        heads = {'Content-Type': 'text/occi',
-                 'X-Auth-Token': extras['token'],
-                 'X-Tenant-Name': extras['tenant_name']}
-        LOG.info('Disposing service orchestrator container via CC... ' + url)
-        self._do_cc_request('DELETE', url, heads)
-
-    # example request to the SO
-    # curl -v -X GET http://localhost:8051/orchestrator/default \
-    #   -H 'X-Auth-Token: '$KID \
-    #   -H 'X-Tenant-Name: '$TENANT
-    @conditional_decorator(timeit, DOING_PERFORMANCE_ANALYSIS)
-    def so_details(self, entity, extras):
-
-        host = entity.extras['host']
-
-        LOG.info('Getting state of service orchestrator with: ' + host + '/orchestrator/default')
-        heads = {
-            'Content-Type': 'text/occi',
-            'Accept': 'text/occi',
-            'X-Auth-Token': extras['token'],
-            'X-Tenant-Name': extras['tenant_name']}
-        r = requests.get('http://' + host + '/orchestrator/default', headers=heads)
-        r.raise_for_status()
-
-        # TODO handle failed stack creation
-
-        # TODO extract this into method
-        attrs = r.headers['x-occi-attribute'].split(', ')
-        for attr in attrs:
-            kv = attr.split('=')
-            if kv[0] != 'occi.core.id':
-                if kv[1].startswith('"') and kv[1].endswith('"'):
-                    kv[1] = kv[1][1:-1]  # scrub off quotes
-                entity.attributes[kv[0]] = kv[1]
-                LOG.debug('OCCI Attribute: ' + kv[0] + ' --> ' + kv[1])
-
-        #service state model:
-        #  - init
-        #  - creating (deploy/provisioning)
-        #  - active (entered into runtime ops)
-        #  - destroying
-        #  - failed
-
-    def _do_cc_request(self, verb, url, heads):
-        """
-        Do a simple HTTP request.
-
-        :param verb: One of POST, DELETE, GET
-        :param url: The URL to use.
-        :param heads: The headers.
-        :return: the response headers.
-        """
-        user = CONFIG.get('cloud_controller', 'user')
-        pwd = CONFIG.get('cloud_controller', 'pwd')
-
-        if verb == 'POST':
-            r = requests.post(url, headers=heads, auth=(user, pwd))
-        elif verb == 'DELETE':
-            r = requests.delete(url, headers=heads, auth=(user, pwd))
-        elif verb == 'GET':
-            r = requests.get(url, headers=heads, auth=(user, pwd))
-        else:
-            raise Exception('Unknown HTTP verb.')
-
-        r.raise_for_status()
-        return r
-
-    def __create_app(self, entity, extras):
+    def __create_app(self):
 
         # name must be A-Za-z0-9 and <=32 chars
-        app_name = entity.kind.term[0:4] + 'srvinst' + ''.join(random.choice('0123456789ABCDEF') for i in range(16))
+        app_name = self.entity.kind.term[0:4] + 'srvinst' + ''.join(random.choice('0123456789ABCDEF') for i in range(16))
         create_app_headers = {
             'Content-Type': 'text/occi',
             'Category': 'app; scheme="http://schemas.ogf.org/occi/platform#", '
@@ -226,10 +74,9 @@ class SOManager():
             'X-OCCI-Attribute': 'occi.app.name=' + app_name
             }
 
-        #TODO requests should be placed on a queue as this is a blocking call
         url = self.nburl + '/app/'
-        LOG.debug('Requesting container to execute SO Bundle: ' + self.nburl + '/app/')
-        r = self._do_cc_request('POST', url, create_app_headers)
+        LOG.debug('Requesting container to execute SO Bundle: ' + url)
+        r = _do_cc_request('POST', url, create_app_headers)
 
         loc = r.headers.get('Location', '')
         if loc == '':
@@ -238,17 +85,18 @@ class SOManager():
         app_uri_path = urlparse(loc).path
         LOG.debug('SO container created: ' + app_uri_path)
 
-        LOG.debug('Updating OCCI entity.identifier from: ' + entity.identifier + ' to: '
-                  + app_uri_path.replace('/app/', entity.kind.location))
-        entity.identifier = app_uri_path.replace('/app/', entity.kind.location)
+        #TODO need to fix this in the OCCI web app context!
+        LOG.debug('Updating OCCI entity.identifier from: ' + self.entity.identifier + ' to: '
+                  + app_uri_path.replace('/app/', self.entity.kind.location))
+        self.entity.identifier = app_uri_path.replace('/app/', self.entity.kind.location)
 
         LOG.debug('Setting occi.core.id to: ' + app_uri_path.replace('/app/', ''))
-        entity.attributes['occi.core.id'] = app_uri_path.replace('/app/', '')
+        self.entity.attributes['occi.core.id'] = app_uri_path.replace('/app/', '')
 
         # get git uri. this is where our bundle is pushed to
         url = self.nburl + app_uri_path
         headers = {'Accept': 'text/occi'}
-        r = self._do_cc_request('GET', url, headers)
+        r = _do_cc_request('GET', url, headers)
 
         attrs = r.headers.get('X-OCCI-Attribute', '')
         if attrs == '':
@@ -266,6 +114,123 @@ class SOManager():
 
         return repo_uri
 
+    def __ensure_ssh_key(self):
+        url = self.nburl + '/public_key/'
+        heads = {'Accept': 'text/occi'}
+        resp = _do_cc_request('GET', url, heads)
+        locs = resp.headers.get('x-occi-location', '')
+        #Split on spaces, test if there is at least one key registered
+        if len(locs.split()) < 1:
+            LOG.debug('No SM SSH registered. Registering default SM SSH key.')
+            occi_key_name, occi_key_content = self.__extract_public_key()
+
+            create_key_headers = {'Content-Type': 'text/occi',
+                'Category': 'public_key; scheme="http://schemas.ogf.org/occi/security/credentials#"',
+                'X-OCCI-Attribute':'occi.key.name="' + occi_key_name + '", occi.key.content="' + occi_key_content + '"'
+            }
+            resp = _do_cc_request('POST', url, create_key_headers)
+        else:
+            LOG.debug('Valid SM SSH is registered with OpenShift.')
+
+    def __extract_public_key(self):
+
+        ssh_key_file = CONFIG.get('service_manager', 'ssh_key_location', '')
+        if ssh_key_file == '':
+            raise Exception('No ssh_key_location parameter supplied in sm.cfg')
+        LOG.debug('Using SSH key file: ' + ssh_key_file)
+
+        with open(ssh_key_file, 'r') as content_file:
+            content = content_file.read()
+            content = content.split()
+
+            if content[0] == 'ssh-dsa':
+                raise Exception("The supplied key is not a RSA ssh key. Location: " + ssh_key_file)
+
+            key_content = content[1]
+            key_name = 'servicemanager'
+
+            if len(content) == 3:
+                key_name = content[2]
+
+            return key_name, key_content
+
+
+class DeploySOProcess(multiprocessing.Process):
+
+    def __init__(self, group=None, target=None, name=None, args=(), kwargs={}):
+        super(DeploySOProcess, self).__init__(group, target, name, args, kwargs)
+        self.entity = args[0]
+        self.extras = args[1]
+        self.repo_uri = self.entity.extras['repo_uri']
+
+        if os.system('which git') != 0:
+            raise EnvironmentError('Git is not available.')
+
+    def run(self):
+        super(DeploySOProcess, self).run()
+        self.deploy_so()
+
+    def deploy_so(self):
+        # get the code of the bundle and push it to the git facilities
+        # offered by OpenShift
+        LOG.debug('Deploying SO Bundle to: ' + self.repo_uri)
+        self.__deploy_app(self.repo_uri)
+
+        host = urlparse(self.repo_uri).netloc.split('@')[1]
+
+        LOG.debug('Creating the SO...')
+        self.__init_so(host)
+
+        # Deployment is done without any control by the client...
+        # otherwise we won't be able to hand back a working service!
+        LOG.debug('Deploying the SO bundle...')
+        self.__deploy_so(host)
+
+    # example request to the SO
+    # curl -v -X PUT http://localhost:8051/orchestrator/default \
+    #   -H 'Content-Type: text/occi' \
+    #   -H 'Category: orchestrator; scheme="http://schemas.mobile-cloud-networking.eu/occi/service#"' \
+    #   -H 'X-Auth-Token: '$KID \
+    #   -H 'X-Tenant-Name: '$TENANT
+    def __init_so(self, host):
+        url = HTTP + host + '/orchestrator/default'
+        heads = {
+            'Category': 'orchestrator; scheme="http://schemas.mobile-cloud-networking.eu/occi/service#"',
+            'Content-Type': 'text/occi',
+            'X-Auth-Token': self.extras['token'],
+            'X-Tenant-Name': self.extras['tenant_name'],
+        }
+
+        LOG.debug('Initialising SO with: ' + url)
+        # TODO: send `entity`'s attributes along with the call to deploy
+        r = requests.put(url, headers=heads)
+        r.raise_for_status()
+
+    # example request to the SO
+    # curl -v -X POST http://localhost:8051/orchestrator/default?action=deploy \
+    #   -H 'Content-Type: text/occi' \
+    #   -H 'Category: deploy; scheme="http://schemas.mobile-cloud-networking.eu/occi/service#"' \
+    #   -H 'X-Auth-Token: '$KID \
+    #   -H 'X-Tenant-Name: '$TENANT
+    def __deploy_so(self, host):
+        url = HTTP + host + '/orchestrator/default'
+        params = {'action': 'deploy'}
+        heads = {
+            'Category': 'deploy; scheme="http://schemas.mobile-cloud-networking.eu/occi/service#"',
+            'Content-Type': 'text/occi',
+            'X-Auth-Token': self.extras['token'],
+            'X-Tenant-Name': self.extras['tenant_name']}
+        LOG.debug('Deploying SO with: ' + url)
+        r = requests.post(url, headers=heads, params=params)
+        r.raise_for_status()
+
+        # Store the stack id. This should not be shown to the EEU.
+        if r.content == 'Please initialize SO with token and tenant first.':
+            self.entity.attributes['mcn.service.state'] = 'failed'
+            raise Exception('Error deploying the SO')
+        else:
+            LOG.debug('SO Deployed ')
+
     def __deploy_app(self, repo):
         """
             Deploy the local SO bundle
@@ -273,7 +238,6 @@ class SOManager():
             - a git repo is returned
             - the bundle is not managed by git
         """
-        # XXX: looks a lot like cc_deploy from mcn_cc :-) add (c)?
 
         # create temp dir...and clone the remote repo provided by OpS
         dir = tempfile.mkdtemp()
@@ -302,48 +266,112 @@ class SOManager():
         os.system(' '.join(['cd', dir, '&&', 'git', 'add', '-A']))
         os.system(' '.join(['cd', dir, '&&', 'git', 'commit', '-m', '"deployment of SO for tenant X"', '-a']))
         LOG.debug('Pushing new code to remote repository...')
-        # XXX the push takes time - place on queue
         os.system(' '.join(['cd', dir, '&&', 'git', 'push']))
 
         shutil.rmtree(dir)
 
-    def __ensure_ssh_key(self):
-        #TODO support inspection of all ssh key content?
-        url = self.nburl + '/public_key/'
-        heads = {'Accept': 'text/occi'}
-        resp = self._do_cc_request('GET', url, heads)
-        locs = resp.headers.get('x-occi-location', '')
-        #Split on spaces, test if there is at least one key registered
-        if len(locs.split()) < 1:
-            LOG.debug('No SM SSH registered. Registering default SM SSH key.')
-            occi_key_name, occi_key_content = self.__extract_public_key()
 
-            create_key_headers = {'Content-Type': 'text/occi',
-                'Category': 'public_key; scheme="http://schemas.ogf.org/occi/security/credentials#"',
-                'X-OCCI-Attribute':'occi.key.name="' + occi_key_name + '", occi.key.content="' + occi_key_content + '"'
-            }
-            resp = self._do_cc_request('POST', url, create_key_headers)
-        else:
-            LOG.debug('Valid SM SSH is registered with OpenShift.')
+class ProvisionSOProcess(multiprocessing.Process):
+    pass
 
-    def __extract_public_key(self):
 
-        ssh_key_file = CONFIG.get('service_manager', 'ssh_key_location', '')
-        if ssh_key_file == '':
-            raise Exception('No ssh_key_location parameter supplied in sm.cfg')
-        LOG.debug('Using SSH key file: ' + ssh_key_file)
+class RetrieveSOProcess(multiprocessing.Process):
+    def __init__(self, group=None, target=None, name=None, args=(), kwargs={}):
+        super(RetrieveSOProcess, self).__init__(group, target, name, args, kwargs)
+        self.entity = args[0]
+        self.extras = args[1]
+        repo_uri = self.entity.extras['repo_uri']
+        self.host = urlparse(repo_uri).netloc.split('@')[1]
 
-        with open(ssh_key_file, 'r') as content_file:
-            content = content_file.read()
-            content = content.split()
+    def run(self):
+        super(RetrieveSOProcess, self).run()
+        self.so_details()
 
-            if content[0] == 'ssh-dsa':
-                raise Exception("The supplied key is not a RSA ssh key. Location: " + ssh_key_file)
+    # example request to the SO
+    # curl -v -X GET http://localhost:8051/orchestrator/default \
+    #   -H 'X-Auth-Token: '$KID \
+    #   -H 'X-Tenant-Name: '$TENANT
+    @conditional_decorator(timeit, DOING_PERFORMANCE_ANALYSIS)
+    def so_details(self):
+        LOG.info('Getting state of service orchestrator with: ' + self.host + '/orchestrator/default')
+        heads = {
+            'Content-Type': 'text/occi',
+            'Accept': 'text/occi',
+            'X-Auth-Token': self.extras['token'],
+            'X-Tenant-Name': self.extras['tenant_name']}
+        r = requests.get(HTTP + self.host + '/orchestrator/default', headers=heads)
+        r.raise_for_status()
 
-            key_content = content[1]
-            key_name = 'servicemanager'
+        attrs = r.headers['x-occi-attribute'].split(', ')
+        for attr in attrs:
+            kv = attr.split('=')
+            if kv[0] != 'occi.core.id':
+                if kv[1].startswith('"') and kv[1].endswith('"'):
+                    kv[1] = kv[1][1:-1]  # scrub off quotes
+                self.entity.attributes[kv[0]] = kv[1]
+                LOG.debug('OCCI Attribute: ' + kv[0] + ' --> ' + kv[1])
 
-            if len(content) == 3:
-                key_name = content[2]
+        self.extras['ret_q'].put(self.entity.attributes)
 
-            return key_name, key_content
+
+class DestroySOProcess(multiprocessing.Process):
+    def __init__(self, group=None, target=None, name=None, args=(), kwargs={}):
+        super(DestroySOProcess, self).__init__(group, target, name, args, kwargs)
+        self.entity = args[0]
+        self.extras = args[1]
+        self.nburl = CONFIG.get('cloud_controller', 'nb_api', '')
+        repo_uri = self.entity.extras['repo_uri']
+        self.host = urlparse(repo_uri).netloc.split('@')[1]
+
+    def run(self):
+        super(DestroySOProcess, self).run()
+        self.dispose()
+
+    # example request to the SO
+    # curl -v -X DELETE http://localhost:8051/orchestrator/default \
+    #   -H 'X-Auth-Token: '$KID \
+    #   -H 'X-Tenant-Name: '$TENANT
+    @conditional_decorator(timeit, DOING_PERFORMANCE_ANALYSIS)
+    def dispose(self):
+        # 1. dispose the active SO, essentially kills the STG/ITG
+        # 2. dispose the resources used to run the SO
+        url = HTTP + self.host + '/orchestrator/default'
+        heads = {'X-Auth-Token': self.extras['token'],
+                 'X-Tenant-Name': self.extras['tenant_name']}
+
+        LOG.info('Disposing service orchestrator with: ' + url)
+        r = requests.delete(url, headers=heads)
+        r.raise_for_status()
+
+        #TODO ensure that there is no conflict between location and term!
+
+        url = self.nburl + self.entity.identifier.replace('/' + self.entity.kind.term + '/', '/app/')
+        heads = {'Content-Type': 'text/occi',
+                 'X-Auth-Token': self.extras['token'],
+                 'X-Tenant-Name': self.extras['tenant_name']}
+        LOG.info('Disposing service orchestrator container via CC... ' + url)
+        _do_cc_request('DELETE', url, heads)
+
+def _do_cc_request(verb, url, heads):
+    """
+    Do a simple HTTP request.
+
+    :param verb: One of POST, DELETE, GET
+    :param url: The URL to use.
+    :param heads: The headers.
+    :return: the response headers.
+    """
+    user = CONFIG.get('cloud_controller', 'user')
+    pwd = CONFIG.get('cloud_controller', 'pwd')
+
+    if verb == 'POST':
+        r = requests.post(url, headers=heads, auth=(user, pwd))
+    elif verb == 'DELETE':
+        r = requests.delete(url, headers=heads, auth=(user, pwd))
+    elif verb == 'GET':
+        r = requests.get(url, headers=heads, auth=(user, pwd))
+    else:
+        raise Exception('Unknown HTTP verb.')
+
+    r.raise_for_status()
+    return r
