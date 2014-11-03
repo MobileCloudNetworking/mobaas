@@ -253,6 +253,17 @@ class DeploySOProcess(multiprocessing.Process):
         LOG.debug('Bundle to add to repo: ' + bundle_loc)
         dir_util.copy_tree(bundle_loc, dir)
 
+        self.__add_openshift_files(bundle_loc)
+
+        # add & push to OpenShift
+        os.system(' '.join(['cd', dir, '&&', 'git', 'add', '-A']))
+        os.system(' '.join(['cd', dir, '&&', 'git', 'commit', '-m', '"deployment of SO for tenant X"', '-a']))
+        LOG.debug('Pushing new code to remote repository...')
+        os.system(' '.join(['cd', dir, '&&', 'git', 'push']))
+
+        shutil.rmtree(dir)
+
+    def __add_openshift_files(self, bundle_loc):
         # put OpenShift stuff in place
         # build and pre_start_python comes from 'support' directory in bundle
         LOG.debug('Adding OpenShift support files from: ' + bundle_loc + '/support')
@@ -273,14 +284,6 @@ class DeploySOProcess(multiprocessing.Process):
         pre_start_file.close()
 
         os.system(' '.join(['chmod', '+x', os.path.join(dir, '.openshift', 'action_hooks', '*')]))
-
-        # add & push to OpenShift
-        os.system(' '.join(['cd', dir, '&&', 'git', 'add', '-A']))
-        os.system(' '.join(['cd', dir, '&&', 'git', 'commit', '-m', '"deployment of SO for tenant X"', '-a']))
-        LOG.debug('Pushing new code to remote repository...')
-        os.system(' '.join(['cd', dir, '&&', 'git', 'push']))
-
-        shutil.rmtree(dir)
 
 
 class ProvisionSOProcess(multiprocessing.Process):
