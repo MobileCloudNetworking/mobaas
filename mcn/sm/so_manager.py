@@ -197,8 +197,11 @@ class DeploySOProcess():
         LOG.debug('Initialising SO with: ' + url)
         LOG.info('Sending headers: ' + heads.__repr__())
         # TODO: send `entity`'s attributes along with the call to deploy
-        r = requests.put(url, headers=heads)
-        r.raise_for_status() #try catch: HTTPError, close process
+        try:
+            r = requests.put(url, headers=heads)
+            r.raise_for_status() #try catch: HTTPError, close process
+        except requests.HTTPError as err:
+            LOG.error('HTTP Error: should do something more here!' + err.message)
 
     # example request to the SO
     # curl -v -X POST http://localhost:8051/orchestrator/default?action=deploy \
@@ -216,8 +219,12 @@ class DeploySOProcess():
             'X-Tenant-Name': self.extras['tenant_name']}
         LOG.debug('Deploying SO with: ' + url)
         LOG.info('Sending headers: ' + heads.__repr__())
-        r = requests.post(url, headers=heads, params=params)
-        r.raise_for_status()
+
+        try:
+            r = requests.post(url, headers=heads, params=params)
+            r.raise_for_status()
+        except requests.HTTPError as err:
+            LOG.error('HTTP Error: should do something more here!' + err.message)
 
         # Store the stack id. This should not be shown to the EEU.
         if r.content == 'Please initialize SO with token and tenant first.':
@@ -262,6 +269,7 @@ class DeploySOProcess():
         # build and pre_start_python comes from 'support' directory in bundle
         LOG.debug('Adding OpenShift support files from: ' + bundle_loc + '/support')
 
+        # TODO generate these files automatically - no need for end-users to manage them
         # 1. Write build
         LOG.debug('Writing build to: ' + os.path.join(dir, '.openshift', 'action_hooks', 'build'))
         shutil.copyfile(bundle_loc+'/support/build', os.path.join(dir, '.openshift', 'action_hooks', 'build'))
@@ -282,7 +290,8 @@ class DeploySOProcess():
 
 class ProvisionSOProcess():
     # TODO
-    pass
+    def __init__(self):
+        pass
 
 
 class RetrieveSOProcess():
@@ -307,8 +316,11 @@ class RetrieveSOProcess():
                 'X-Tenant-Name': self.extras['tenant_name']}
             LOG.info('Getting state of service orchestrator with: ' + self.host + '/orchestrator/default')
             LOG.info('Sending headers: ' + heads.__repr__())
-            r = requests.get(HTTP + self.host + '/orchestrator/default', headers=heads)
-            r.raise_for_status()
+            try:
+                r = requests.get(HTTP + self.host + '/orchestrator/default', headers=heads)
+                r.raise_for_status()
+            except requests.HTTPError as err:
+                LOG.error('HTTP Error: should do something more here!' + err.message)
 
             attrs = r.headers['x-occi-attribute'].split(', ')
             for attr in attrs:
@@ -345,8 +357,11 @@ class DestroySOProcess():
 
         LOG.info('Disposing service orchestrator with: ' + url)
         LOG.info('Sending headers: ' + heads.__repr__())
-        r = requests.delete(url, headers=heads)
-        r.raise_for_status()  # TODO if error report verbosely and perform recovery
+        try:
+            r = requests.delete(url, headers=heads)
+            r.raise_for_status()  # TODO if error report verbosely and perform recovery
+        except requests.HTTPError as err:
+            LOG.error('HTTP Error: should do something more here!' + err.message)
 
         url = self.nburl + self.entity.identifier.replace('/' + self.entity.kind.term + '/', '/app/')
         heads = {'Content-Type': 'text/occi',
@@ -368,15 +383,17 @@ def _do_cc_request(verb, url, heads):
     """
     user = CONFIG.get('cloud_controller', 'user')
     pwd = CONFIG.get('cloud_controller', 'pwd')
-
-    if verb == 'POST':
-        r = requests.post(url, headers=heads, auth=(user, pwd))
-    elif verb == 'DELETE':
-        r = requests.delete(url, headers=heads, auth=(user, pwd))
-    elif verb == 'GET':
-        r = requests.get(url, headers=heads, auth=(user, pwd))
+    if verb in ['POST', 'DELETE', 'GET']:
+        try:
+            if verb == 'POST':
+                r = requests.post(url, headers=heads, auth=(user, pwd))
+            elif verb == 'DELETE':
+                r = requests.delete(url, headers=heads, auth=(user, pwd))
+            elif verb == 'GET':
+                r = requests.get(url, headers=heads, auth=(user, pwd))
+            r.raise_for_status() # TODO if error report verbosely and perform recovery
+            return r
+        except requests.HTTPError as err:
+                LOG.error('HTTP Error: should do something more here!' + err.message)
     else:
-        raise Exception('Unknown HTTP verb.')
-
-    r.raise_for_status() # TODO if error report verbosely and perform recovery
-    return r
+        LOG.error('Supplied verb is unknown: ' + verb)
