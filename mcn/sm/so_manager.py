@@ -250,7 +250,8 @@ class DeploySOProcess():
 
         # add & push to OpenShift
         os.system(' '.join(['cd', dir, '&&', 'git', 'add', '-A']))
-        os.system(' '.join(['cd', dir, '&&', 'git', 'commit', '-m', '"deployment of SO for tenant X"', '-a']))
+        os.system(' '.join(['cd', dir, '&&', 'git', 'commit', '-m', '"deployment of SO for tenant ' + \
+                            self.extras['tenant_name'] + '"', '-a']))
         LOG.debug('Pushing new code to remote repository...')
         os.system(' '.join(['cd', dir, '&&', 'git', 'push']))
 
