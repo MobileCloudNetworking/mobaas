@@ -13,12 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-# XXX: Rename file to service.py
-
 __author__ = 'andy'
 
 from wsgiref.simple_server import make_server
 
+from keystoneclient.v2_0 import client
 from occi.wsgi import Application
 from occi.registry import NonePersistentRegistry
 
@@ -26,7 +25,6 @@ from mcn.sm.backends import ServiceBackend
 from mcn.sm import CONFIG
 from mcn.sm import LOG
 from sdk.mcn import util
-from keystoneclient.v2_0 import client
 
 
 class SMRegistry(NonePersistentRegistry):
@@ -64,8 +62,7 @@ class MCNApplication(Application):
             LOG.error('No X-Tenant-Name header supplied.')
             raise Exception('No X-Tenant-Name header supplied.')
 
-        # XXX: better: self._call_occi...
-        return super(MCNApplication, self)._call_occi(environ, response, token=auth, tenant_name=tenant)
+        return self._call_occi(environ, response, token=auth, tenant_name=tenant)
 
 
 class Service():
@@ -80,9 +77,6 @@ class Service():
 
     #TODO this functionality should be moved over to the SDK
     def register_service(self, srv_type):
-        # XXX: following code should either a) solely use SDK or b) not use SDK ata ll and go to keystone directl.y
-        # if not in keystone service regsitry, then register the service and its endpoints
-
         design_uri = CONFIG.get('service_manager', 'design_uri', '')
         if design_uri == '':
             raise Exception('No design_uri parameter supplied in sm.cfg')
@@ -101,7 +95,6 @@ class Service():
             keystone = client.Client(token=token, tenant_name=tenant_name, auth_url=design_uri)
 
             # taken from the kind definition
-            # TODO note in documentation that the admin URL should be accessible by the SM
             s = keystone.services.create(srv_type.scheme+srv_type.term, srv_type.scheme+srv_type.term, srv_type.title)
 
             region = CONFIG.get('service_manager_admin', 'region', '')
@@ -112,7 +105,6 @@ class Service():
             if service_endpoint == '':
                 raise Exception('No service_endpoint parameter supplied in sm.cfg')
 
-            #XXX it may be needed to specify internal, admin and pubilc URLs
             internalurl = adminurl = publicurl = service_endpoint
 
             ep = keystone.endpoints.create(region, s.id, publicurl, adminurl, internalurl)

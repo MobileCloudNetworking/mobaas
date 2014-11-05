@@ -15,10 +15,10 @@
 
 __author__ = 'andy'
 
-import logging
 import multiprocessing
-from occi.backend import ActionBackend, KindBackend
 
+from occi.backend import ActionBackend, KindBackend
+from mcn.sm.processes_manager import ProMgr
 from mcn.sm.so_manager import CreateSOProcess
 from mcn.sm.so_manager import DeploySOProcess
 from mcn.sm.so_manager import RetrieveSOProcess
@@ -26,56 +26,59 @@ from mcn.sm.so_manager import DestroySOProcess
 
 #service state model:
 #  - init
-#  - creating (deploy/provisioning)
+#  - creating
+#  - deploying
+#  - provisioning
 #  - active (entered into runtime ops)
 #  - destroying
 #  - failed
 
+import occi.registry
 
 class ServiceBackend(KindBackend, ActionBackend):
-    '''
+    """
     Provides the basic functionality required to CRUD SOs
-    '''
+    """
 
     def __init__(self):
-        multiprocessing.log_to_stderr(logging.DEBUG)
         self.ret_q = multiprocessing.Queue()
+        self.god_orch = ProMgr()
+        self.god_orch.run()
 
     def create(self, entity, extras):
         super(ServiceBackend, self).create(entity, extras)
 
-        # set the return value queue
-        extras['ret_q'] = self.ret_q
+        entity.attributes['mcn.service.state'] = 'init'
 
-        # run the process
-        tcp = CreateSOProcess(args=(entity, extras, ))
-        tcp.start()
-        tcp.join()
+        # put the task on the queue and have it processed
+        self.god_orch.create_tasks.put(CreateSOProcess(entity, extras))
+        # when processed get the results
+        ret_vals = self.god_orch.create_ret_vals.get()
 
-        ret_vals = self.ret_q.get()
-        t_entity = ret_vals['entity']
+        # update the entity
+        t_entity = ret_vals[0]['entity']
         entity.attributes = t_entity.attributes
         entity.identifier = t_entity.identifier
+        entity.attributes['mcn.service.state'] = 'creating'
 
-        # pass the repo URI to the deploy process, no join() needed
-        entity.extras = {'repo_uri': ret_vals['repo_uri']}
-        dp = DeploySOProcess(args=(entity, extras, ))
-        dp.start()
+        # pass the repo URI to the deploy process
+        entity.extras = {'repo_uri': ret_vals[0]['repo_uri']}
+        self.god_orch.deploy_tasks.put(DeploySOProcess(entity, extras))
 
     def retrieve(self, entity, extras):
         super(ServiceBackend, self).retrieve(entity, extras)
 
-        # set the return value queue
-        extras['ret_q'] = self.ret_q
-
         # run the process
-        rp = RetrieveSOProcess(args=(entity, extras, ))
-        rp.start()
-        rp.join()
+        self.god_orch.retrieve_tasks.put(RetrieveSOProcess(entity, extras))
+        ret_vals = self.god_orch.retrieve_ret_vals.get()
 
         # set the entity's attributes
-        entity.attributes = extras['ret_q'].get()
-        print entity.attributes
+        entity.attributes = ret_vals[0]['entity'].attributes
+
+    def delete(self, entity, extras):
+        super(ServiceBackend, self).delete(entity, extras)
+        entity.attributes['mcn.service.state'] = 'destroying'
+        self.god_orch.destroy_tasks.put(DestroySOProcess(entity, extras))
 
     def update(self, old, new, extras):
         raise NotImplementedError()
@@ -83,16 +86,6 @@ class ServiceBackend(KindBackend, ActionBackend):
     def replace(self, old, new, extras):
         raise NotImplementedError()
 
-    def delete(self, entity, extras):
-        super(ServiceBackend, self).delete(entity, extras)
-        dp = DestroySOProcess(args=(entity, extras, ))
-        # we don't have to block here => no join()
-        dp.start()
-
     # currently not exposed on the kind
     def action(self, entity, action, attributes, extras):
         raise NotImplementedError()
-        # super(ServiceBackend, self).action(entity, action, attributes, extras)
-        # if action == 'provision':
-        #     #pass service_instance_id here
-        #     self.som.provision(entity, extras)

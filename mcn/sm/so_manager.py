@@ -34,12 +34,11 @@ from mcn.sm import timeit, conditional_decorator, DOING_PERFORMANCE_ANALYSIS
 HTTP = 'http://'
 
 
-class CreateSOProcess(multiprocessing.Process):
+class CreateSOProcess():
 
-    def __init__(self, group=None, target=None, name=None, args=(), kwargs={}):
-        super(CreateSOProcess, self).__init__(group, target, name, args, kwargs)
-        self.entity = args[0]
-        self.extras = args[1]
+    def __init__(self, entity, extras):
+        self.entity = entity
+        self.extras = extras
         self.nburl = CONFIG.get('cloud_controller', 'nb_api', '')
         if self.nburl[-1] == '/':
             self.nburl = self.nburl[0:-1]
@@ -47,10 +46,6 @@ class CreateSOProcess(multiprocessing.Process):
 
     @conditional_decorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def run(self):
-        super(CreateSOProcess, self).run()
-        self.__create_so()
-
-    def __create_so(self):
         LOG.debug('Ensuring SM SSH Key...')
         self.__ensure_ssh_key()
 
@@ -59,9 +54,7 @@ class CreateSOProcess(multiprocessing.Process):
         repo_uri = self.__create_app()
 
         #send back the repo URI and new resource id
-        q = self.extras['ret_q']
-        ret_val={'repo_uri': repo_uri, 'entity': self.entity}
-        q.put(ret_val)
+        return {'repo_uri': repo_uri, 'entity': self.entity}
 
     def __create_app(self):
 
@@ -128,7 +121,7 @@ class CreateSOProcess(multiprocessing.Process):
                 'Category': 'public_key; scheme="http://schemas.ogf.org/occi/security/credentials#"',
                 'X-OCCI-Attribute':'occi.key.name="' + occi_key_name + '", occi.key.content="' + occi_key_content + '"'
             }
-            resp = _do_cc_request('POST', url, create_key_headers)
+            _do_cc_request('POST', url, create_key_headers)
         else:
             LOG.debug('Valid SM SSH is registered with OpenShift.')
 
@@ -155,12 +148,11 @@ class CreateSOProcess(multiprocessing.Process):
             return key_name, key_content
 
 
-class DeploySOProcess(multiprocessing.Process):
+class DeploySOProcess():
 
-    def __init__(self, group=None, target=None, name=None, args=(), kwargs={}):
-        super(DeploySOProcess, self).__init__(group, target, name, args, kwargs)
-        self.entity = args[0]
-        self.extras = args[1]
+    def __init__(self, entity, extras):
+        self.entity = entity
+        self.extras = extras
         self.repo_uri = self.entity.extras['repo_uri']
 
         if os.system('which git') != 0:
@@ -168,10 +160,6 @@ class DeploySOProcess(multiprocessing.Process):
 
     @conditional_decorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def run(self):
-        super(DeploySOProcess, self).run()
-        self.deploy_so()
-
-    def deploy_so(self):
         # get the code of the bundle and push it to the git facilities
         # offered by OpenShift
         LOG.debug('Deploying SO Bundle to: ' + self.repo_uri)
@@ -285,71 +273,66 @@ class DeploySOProcess(multiprocessing.Process):
         os.system(' '.join(['chmod', '+x', os.path.join(dir, '.openshift', 'action_hooks', '*')]))
 
 
-class ProvisionSOProcess(multiprocessing.Process):
+class ProvisionSOProcess():
     # TODO
     pass
 
 
-class RetrieveSOProcess(multiprocessing.Process):
-    def __init__(self, group=None, target=None, name=None, args=(), kwargs={}):
-        super(RetrieveSOProcess, self).__init__(group, target, name, args, kwargs)
-        self.entity = args[0]
-        self.extras = args[1]
+class RetrieveSOProcess():
+    def __init__(self, entity, extras):
+        self.entity = entity
+        self.extras = extras
         repo_uri = self.entity.extras['repo_uri']
         self.host = urlparse(repo_uri).netloc.split('@')[1]
 
     @conditional_decorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def run(self):
-        super(RetrieveSOProcess, self).run()
-        self.so_details()
+        # example request to the SO
+        # curl -v -X GET http://localhost:8051/orchestrator/default \
+        #   -H 'X-Auth-Token: '$KID \
+        #   -H 'X-Tenant-Name: '$TENANT
 
-    # example request to the SO
-    # curl -v -X GET http://localhost:8051/orchestrator/default \
-    #   -H 'X-Auth-Token: '$KID \
-    #   -H 'X-Tenant-Name: '$TENANT
-    def so_details(self):
-        LOG.info('Getting state of service orchestrator with: ' + self.host + '/orchestrator/default')
-        heads = {
-            'Content-Type': 'text/occi',
-            'Accept': 'text/occi',
-            'X-Auth-Token': self.extras['token'],
-            'X-Tenant-Name': self.extras['tenant_name']}
-        r = requests.get(HTTP + self.host + '/orchestrator/default', headers=heads)
-        r.raise_for_status()
+        #TODO only execute if deploy is the next valid state, otherwise just return current entity
 
-        attrs = r.headers['x-occi-attribute'].split(', ')
-        for attr in attrs:
-            kv = attr.split('=')
-            if kv[0] != 'occi.core.id':
-                if kv[1].startswith('"') and kv[1].endswith('"'):
-                    kv[1] = kv[1][1:-1]  # scrub off quotes
-                self.entity.attributes[kv[0]] = kv[1]
-                LOG.debug('OCCI Attribute: ' + kv[0] + ' --> ' + kv[1])
+        so_is_deployed = True
+        if so_is_deployed:
+            LOG.info('Getting state of service orchestrator with: ' + self.host + '/orchestrator/default')
+            heads = {
+                'Content-Type': 'text/occi',
+                'Accept': 'text/occi',
+                'X-Auth-Token': self.extras['token'],
+                'X-Tenant-Name': self.extras['tenant_name']}
+            r = requests.get(HTTP + self.host + '/orchestrator/default', headers=heads)
+            r.raise_for_status()
 
-        self.extras['ret_q'].put(self.entity.attributes)
+            attrs = r.headers['x-occi-attribute'].split(', ')
+            for attr in attrs:
+                kv = attr.split('=')
+                if kv[0] != 'occi.core.id':
+                    if kv[1].startswith('"') and kv[1].endswith('"'):
+                        kv[1] = kv[1][1:-1]  # scrub off quotes
+                    self.entity.attributes[kv[0]] = kv[1]
+                    LOG.debug('OCCI Attribute: ' + kv[0] + ' --> ' + kv[1])
+
+        return {'entity':self.entity}
 
 
-class DestroySOProcess(multiprocessing.Process):
-    def __init__(self, group=None, target=None, name=None, args=(), kwargs={}):
-        super(DestroySOProcess, self).__init__(group, target, name, args, kwargs)
-        self.entity = args[0]
-        self.extras = args[1]
+class DestroySOProcess():
+    def __init__(self, entity, extras):
+        self.entity = entity
+        self.extras = extras
         self.nburl = CONFIG.get('cloud_controller', 'nb_api', '')
         repo_uri = self.entity.extras['repo_uri']
         self.host = urlparse(repo_uri).netloc.split('@')[1]
 
     @conditional_decorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def run(self):
-        super(DestroySOProcess, self).run()
-        self.dispose()
-
-    # example request to the SO
-    # curl -v -X DELETE http://localhost:8051/orchestrator/default \
-    #   -H 'X-Auth-Token: '$KID \
-    #   -H 'X-Tenant-Name: '$TENANT
-    def dispose(self):
         # 1. dispose the active SO, essentially kills the STG/ITG
         # 2. dispose the resources used to run the SO
+        # example request to the SO
+        # curl -v -X DELETE http://localhost:8051/orchestrator/default \
+        #   -H 'X-Auth-Token: '$KID \
+        #   -H 'X-Tenant-Name: '$TENANT
         url = HTTP + self.host + '/orchestrator/default'
         heads = {'X-Auth-Token': self.extras['token'],
                  'X-Tenant-Name': self.extras['tenant_name']}
@@ -364,6 +347,7 @@ class DestroySOProcess(multiprocessing.Process):
                  'X-Tenant-Name': self.extras['tenant_name']}
         LOG.info('Disposing service orchestrator container via CC... ' + url)
         _do_cc_request('DELETE', url, heads)
+
 
 def _do_cc_request(verb, url, heads):
     """
