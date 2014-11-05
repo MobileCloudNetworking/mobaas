@@ -33,8 +33,7 @@ class DefaultConfigParser(ConfigParser.ConfigParser):
         return value
 
 
-class conditional_decorator(object):
-    # XXX: classes do CamelCase.
+class ConditionalDecorator(object):
     def __init__(self, dec, condition):
         self.decorator = dec
         self.condition = condition

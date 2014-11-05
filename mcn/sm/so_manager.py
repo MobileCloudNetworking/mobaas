@@ -18,7 +18,6 @@ __author__ = 'andy'
 
 from distutils import dir_util
 from mako.template import Template
-import multiprocessing
 import os
 import random
 import requests
@@ -28,7 +27,7 @@ from urlparse import urlparse
 
 from mcn.sm import CONFIG
 from mcn.sm import LOG
-from mcn.sm import timeit, conditional_decorator, DOING_PERFORMANCE_ANALYSIS
+from mcn.sm import timeit, ConditionalDecorator, DOING_PERFORMANCE_ANALYSIS
 
 
 HTTP = 'http://'
@@ -44,7 +43,7 @@ class CreateSOProcess():
             self.nburl = self.nburl[0:-1]
         LOG.info('CloudController Northbound API: ' + self.nburl)
 
-    @conditional_decorator(timeit, DOING_PERFORMANCE_ANALYSIS)
+    @ConditionalDecorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def run(self):
         LOG.debug('Ensuring SM SSH Key...')
         self.__ensure_ssh_key()
@@ -60,7 +59,7 @@ class CreateSOProcess():
 
         # name must be A-Za-z0-9 and <=32 chars
         app_name = self.entity.kind.term[0:4] + 'srvinst' + ''.join(random.choice('0123456789ABCDEF') for i in range(16))
-        create_app_headers = {
+        heads = {
             'Content-Type': 'text/occi',
             'Category': 'app; scheme="http://schemas.ogf.org/occi/platform#", '
             'python-2.7; scheme="http://schemas.openshift.com/template/app#", '
@@ -70,7 +69,8 @@ class CreateSOProcess():
 
         url = self.nburl + '/app/'
         LOG.debug('Requesting container to execute SO Bundle: ' + url)
-        r = _do_cc_request('POST', url, create_app_headers)
+        LOG.info('Sending headers: ' + heads.__repr__())
+        r = _do_cc_request('POST', url, heads)
 
         loc = r.headers.get('Location', '')
         if loc == '':
@@ -89,6 +89,8 @@ class CreateSOProcess():
         # get git uri. this is where our bundle is pushed to
         url = self.nburl + app_uri_path
         headers = {'Accept': 'text/occi'}
+        LOG.debug('Requesting container\'s git URL ' + url)
+        LOG.info('Sending headers: ' + heads.__repr__())
         r = _do_cc_request('GET', url, headers)
 
         attrs = r.headers.get('X-OCCI-Attribute', '')
@@ -158,7 +160,7 @@ class DeploySOProcess():
         if os.system('which git') != 0:
             raise EnvironmentError('Git is not available.')
 
-    @conditional_decorator(timeit, DOING_PERFORMANCE_ANALYSIS)
+    @ConditionalDecorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def run(self):
         # get the code of the bundle and push it to the git facilities
         # offered by OpenShift
@@ -174,6 +176,8 @@ class DeploySOProcess():
         # otherwise we won't be able to hand back a working service!
         LOG.debug('Deploying the SO bundle...')
         self.__deploy_so(host)
+
+        return {'entity': self.entity}
 
     # example request to the SO
     # curl -v -X PUT http://localhost:8051/orchestrator/default \
@@ -191,9 +195,10 @@ class DeploySOProcess():
         }
 
         LOG.debug('Initialising SO with: ' + url)
+        LOG.info('Sending headers: ' + heads.__repr__())
         # TODO: send `entity`'s attributes along with the call to deploy
         r = requests.put(url, headers=heads)
-        r.raise_for_status()
+        r.raise_for_status() #try catch: HTTPError, close process
 
     # example request to the SO
     # curl -v -X POST http://localhost:8051/orchestrator/default?action=deploy \
@@ -210,6 +215,7 @@ class DeploySOProcess():
             'X-Auth-Token': self.extras['token'],
             'X-Tenant-Name': self.extras['tenant_name']}
         LOG.debug('Deploying SO with: ' + url)
+        LOG.info('Sending headers: ' + heads.__repr__())
         r = requests.post(url, headers=heads, params=params)
         r.raise_for_status()
 
@@ -285,23 +291,21 @@ class RetrieveSOProcess():
         repo_uri = self.entity.extras['repo_uri']
         self.host = urlparse(repo_uri).netloc.split('@')[1]
 
-    @conditional_decorator(timeit, DOING_PERFORMANCE_ANALYSIS)
+    @ConditionalDecorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def run(self):
         # example request to the SO
         # curl -v -X GET http://localhost:8051/orchestrator/default \
         #   -H 'X-Auth-Token: '$KID \
         #   -H 'X-Tenant-Name: '$TENANT
 
-        #TODO only execute if deploy is the next valid state, otherwise just return current entity
-
-        so_is_deployed = True
-        if so_is_deployed:
-            LOG.info('Getting state of service orchestrator with: ' + self.host + '/orchestrator/default')
+        if self.entity.attributes['mcn.service.state'] in ['deploying', 'provisioning']:
             heads = {
                 'Content-Type': 'text/occi',
                 'Accept': 'text/occi',
                 'X-Auth-Token': self.extras['token'],
                 'X-Tenant-Name': self.extras['tenant_name']}
+            LOG.info('Getting state of service orchestrator with: ' + self.host + '/orchestrator/default')
+            LOG.info('Sending headers: ' + heads.__repr__())
             r = requests.get(HTTP + self.host + '/orchestrator/default', headers=heads)
             r.raise_for_status()
 
@@ -313,7 +317,8 @@ class RetrieveSOProcess():
                         kv[1] = kv[1][1:-1]  # scrub off quotes
                     self.entity.attributes[kv[0]] = kv[1]
                     LOG.debug('OCCI Attribute: ' + kv[0] + ' --> ' + kv[1])
-
+        else:
+            LOG.debug('Cannot get entity as it is not in the deploying or provisioning state')
         return {'entity':self.entity}
 
 
@@ -325,7 +330,7 @@ class DestroySOProcess():
         repo_uri = self.entity.extras['repo_uri']
         self.host = urlparse(repo_uri).netloc.split('@')[1]
 
-    @conditional_decorator(timeit, DOING_PERFORMANCE_ANALYSIS)
+    @ConditionalDecorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def run(self):
         # 1. dispose the active SO, essentially kills the STG/ITG
         # 2. dispose the resources used to run the SO
@@ -338,6 +343,7 @@ class DestroySOProcess():
                  'X-Tenant-Name': self.extras['tenant_name']}
 
         LOG.info('Disposing service orchestrator with: ' + url)
+        LOG.info('Sending headers: ' + heads.__repr__())
         r = requests.delete(url, headers=heads)
         r.raise_for_status()  # TODO if error report verbosely and perform recovery
 
@@ -346,6 +352,7 @@ class DestroySOProcess():
                  'X-Auth-Token': self.extras['token'],
                  'X-Tenant-Name': self.extras['tenant_name']}
         LOG.info('Disposing service orchestrator container via CC... ' + url)
+        LOG.info('Sending headers: ' + heads.__repr__())
         _do_cc_request('DELETE', url, heads)
 
 

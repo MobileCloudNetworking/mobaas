@@ -15,10 +15,10 @@
 
 __author__ = 'andy'
 
-import multiprocessing
-
 from occi.backend import ActionBackend, KindBackend
+
 from mcn.sm.processes_manager import ProMgr
+from mcn.sm.processes_manager import StateUpdater
 from mcn.sm.so_manager import CreateSOProcess
 from mcn.sm.so_manager import DeploySOProcess
 from mcn.sm.so_manager import RetrieveSOProcess
@@ -33,17 +33,17 @@ from mcn.sm.so_manager import DestroySOProcess
 #  - destroying
 #  - failed
 
-import occi.registry
 
 class ServiceBackend(KindBackend, ActionBackend):
     """
     Provides the basic functionality required to CRUD SOs
     """
 
-    def __init__(self):
-        self.ret_q = multiprocessing.Queue()
+    def __init__(self, app):
         self.god_orch = ProMgr()
         self.god_orch.run()
+        self.state_updater = StateUpdater(self.god_orch.deploy_ret_vals, app.registry)
+        self.state_updater.start()
 
     def create(self, entity, extras):
         super(ServiceBackend, self).create(entity, extras)

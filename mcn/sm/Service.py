@@ -18,8 +18,9 @@ __author__ = 'andy'
 from wsgiref.simple_server import make_server
 
 from keystoneclient.v2_0 import client
-from occi.wsgi import Application
+from occi.exceptions import HTTPError
 from occi.registry import NonePersistentRegistry
+from occi.wsgi import Application
 
 from mcn.sm.backends import ServiceBackend
 from mcn.sm import CONFIG
@@ -53,14 +54,13 @@ class MCNApplication(Application):
 
         if auth == '':
             LOG.error('No X-Auth-Token header supplied.')
-            raise Exception('No X-Auth-Token header supplied.')
-            # XXX: better change to sending back 401 - don't throw exceptions around.
+            raise HTTPError(401, 'No X-Auth-Token header supplied.')
 
         tenant = environ.get('HTTP_X_TENANT_NAME', '')
 
         if tenant == '':
             LOG.error('No X-Tenant-Name header supplied.')
-            raise Exception('No X-Tenant-Name header supplied.')
+            raise HTTPError(400, 'No X-Tenant-Name header supplied.')
 
         return self._call_occi(environ, response, token=auth, tenant_name=tenant)
 
@@ -69,13 +69,13 @@ class Service():
 
     def __init__(self, app, srv_type):
         self.app = app
-        self.service_backend = ServiceBackend()
+        self.service_backend = ServiceBackend(app)
         self.srv_type = srv_type
 
     def register_extension(self, mixin, backend):
         self.app.register_backend(mixin, backend)
 
-    #TODO this functionality should be moved over to the SDK
+    # TODO this functionality should be moved over to the SDK or put in the CC API
     def register_service(self, srv_type):
         design_uri = CONFIG.get('service_manager', 'design_uri', '')
         if design_uri == '':
@@ -105,20 +105,20 @@ class Service():
             if service_endpoint == '':
                 raise Exception('No service_endpoint parameter supplied in sm.cfg')
 
-            internalurl = adminurl = publicurl = service_endpoint
+            internal_url = admin_url = public_url = service_endpoint
 
-            ep = keystone.endpoints.create(region, s.id, publicurl, adminurl, internalurl)
-            LOG.debug('Service is now registered with keystone: ID: ' + ep.id + ' Region: ' + ep.region + ' Public URL: ' + ep.publicurl + ' Service ID: '+s.id)
+            ep = keystone.endpoints.create(region, s.id, public_url, admin_url, internal_url)
+            LOG.debug('Service is now registered with keystone: ID: ' + ep.id + ' Region: ' + ep.region + ' Public URL:\
+                        ' + ep.publicurl + ' Service ID: '+s.id)
         else:
             LOG.debug('Service is already registered with keystone. Service endpoint is: ' + srv_ep)
 
         return
 
     def run(self):
-        # register the Service & backend
         self.app.register_backend(self.srv_type, self.service_backend)
 
-        #TODO fix for if param not present in config file
+        # TODO fix for if param not present in config file
         reg_srv = CONFIG.getboolean('service_manager_admin', 'register_service')
         if reg_srv:
             self.register_service(self.srv_type)

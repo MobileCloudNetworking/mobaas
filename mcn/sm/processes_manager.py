@@ -16,8 +16,27 @@
 __author__ = 'andy'
 
 import multiprocessing
+from threading import Thread
 
 from mcn.sm import LOG
+
+
+class StateUpdater(Thread):
+
+    def __init__(self, results_q, registry):
+        super(StateUpdater, self).__init__()
+        self.results_q = results_q
+        self.registry = registry
+
+    def run(self):
+        super(StateUpdater, self).run()
+        LOG.debug('Starting StateUpdater thread')
+        entity = self.results_q.get()[0]['entity']
+        LOG.debug('Received entity on the queue...')
+        LOG.debug('Updating entity state')
+        entity.attributes['mcn.service.state'] = 'provisioning'
+        LOG.debug('Updating entity in registry')
+        self.registry.add_resource(key=entity.identifier, resource=entity, extras=None)
 
 
 class Executor(multiprocessing.Process):
