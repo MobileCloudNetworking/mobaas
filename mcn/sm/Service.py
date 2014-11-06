@@ -73,7 +73,6 @@ class Service():
         self.app = app
         self.service_backend = ServiceBackend(app)
         self.srv_type = srv_type
-        self.srv_ep = None
 
     def register_extension(self, mixin, backend):
         self.app.register_backend(mixin, backend)
@@ -84,14 +83,20 @@ class Service():
         # TODO fix for if param not present in config file
         reg_srv = CONFIG.getboolean('service_manager_admin', 'register_service')
         if reg_srv:
-            self.srv_ep = register_service(self.srv_type)
+            register_service(self.srv_type)
 
-        # for sig in [signal.SIGTERM, signal.SIGINT, signal.SIGHUP, signal.SIGQUIT]:
-        #     signal.signal(sig, shutdown_handler)
+        for sig in [signal.SIGTERM, signal.SIGINT, signal.SIGHUP, signal.SIGQUIT]:
+            signal.signal(sig, shutdown_handler)
 
         LOG.info('Service Manager running on interfaces, running on port: ' + CONFIG.get('general', 'port'))
         httpd = make_server('', int(CONFIG.get('general', 'port')), self.app)
         httpd.serve_forever()
+
+
+def shutdown_handler(signum = None, frame = None):
+    LOG.info('Signal handler called with signal ' + str(signum))
+    deregister_service()
+    sys.exit(0)
 
 
 # TODO this functionality should be moved over to the SDK or put in the CC API
@@ -135,8 +140,6 @@ def register_service(self, srv_type):
 
     return ep
 
-def shutdown_handler(signum = None, frame = None):
-    LOG.info('Signal handler called with signal' + str(signum))
 
-    # sys.exit(0)
-
+def deregister_service():
+    pass

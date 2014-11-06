@@ -38,7 +38,7 @@ class AsychExe(Thread):
     Only purpose of this thread is to execute a list of tasks sequentially
     as a background "thread".
     """
-    def __init__(self, registry, tasks):
+    def __init__(self, tasks, registry=None):
         super(AsychExe, self).__init__()
         self.registry = registry
         self.tasks = tasks
@@ -49,8 +49,9 @@ class AsychExe(Thread):
 
         for task in self.tasks:
             entity, extras = task.run()
-            LOG.debug('Updating entity in registry')
-            self.registry.add_resource(key=entity.identifier, resource=entity, extras=extras)
+            if self.registry:
+                LOG.debug('Updating entity in registry')
+                self.registry.add_resource(key=entity.identifier, resource=entity, extras=extras)
 
 
 class Task():
@@ -63,7 +64,7 @@ class Task():
         raise NotImplemented()
 
 
-class CreateSOTask(Task):
+class CreateSO(Task):
 
     def __init__(self, entity, extras):
         Task.__init__(self, entity, extras)
@@ -183,7 +184,7 @@ class CreateSOTask(Task):
             return key_name, key_content
 
 
-class ActivateSOTask(Task):
+class ActivateSO(Task):
 
     def __init__(self, entity, extras):
         Task.__init__(self, entity, extras)
@@ -287,7 +288,7 @@ class ActivateSOTask(Task):
         os.system(' '.join(['chmod', '+x', os.path.join(dir, '.openshift', 'action_hooks', '*')]))
 
 
-class DeploySOTask(Task):
+class DeploySO(Task):
 
     def __init__(self, entity, extras):
         Task.__init__(self, entity, extras)
@@ -326,7 +327,7 @@ class DeploySOTask(Task):
         return self.entity, self.extras
 
 
-class ProvisionSOTask(Task):
+class ProvisionSO(Task):
 
     def __init__(self, entity, extras):
         Task.__init__(self, entity, extras)
@@ -356,7 +357,7 @@ class ProvisionSOTask(Task):
         return self.entity, self.extras
 
 
-class RetrieveSOTask(Task):
+class RetrieveSO(Task):
 
     def __init__(self, entity, extras):
         Task.__init__(self, entity, extras)
@@ -399,7 +400,7 @@ class RetrieveSOTask(Task):
         return self.entity, self.extras
 
 
-class DestroySOTask(Task):
+class DestroySO(Task):
     def __init__(self, entity, extras):
         Task.__init__(self, entity, extras)
         self.nburl = CONFIG.get('cloud_controller', 'nb_api', '')
