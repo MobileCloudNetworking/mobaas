@@ -96,6 +96,7 @@ class Service():
 
 # TODO this functionality should be moved over to the SDK or put in the CC API
 def register_service(self, srv_type):
+    ep = None
     design_uri = CONFIG.get('service_manager', 'design_uri', '')
     if design_uri == '':
         raise Exception('No design_uri parameter supplied in sm.cfg')

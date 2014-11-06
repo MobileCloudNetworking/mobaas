@@ -33,7 +33,7 @@ from mcn.sm import timeit, ConditionalDecorator, DOING_PERFORMANCE_ANALYSIS
 HTTP = 'http://'
 
 
-class CreateSOProcess():
+class CreateSOTask():
 
     def __init__(self, entity, extras):
         self.entity = entity
@@ -150,7 +150,7 @@ class CreateSOProcess():
             return key_name, key_content
 
 
-class DeploySOProcess():
+class DeploySOTask():
 
     def __init__(self, entity, extras):
         self.entity = entity
@@ -288,13 +288,13 @@ class DeploySOProcess():
         os.system(' '.join(['chmod', '+x', os.path.join(dir, '.openshift', 'action_hooks', '*')]))
 
 
-class ProvisionSOProcess():
+class ProvisionSOTask():
     # TODO
     def __init__(self):
         pass
 
 
-class RetrieveSOProcess():
+class RetrieveSOTask():
     def __init__(self, entity, extras):
         self.entity = entity
         self.extras = extras
@@ -335,7 +335,7 @@ class RetrieveSOProcess():
         return {'entity':self.entity}
 
 
-class DestroySOProcess():
+class DestroySOTask():
     def __init__(self, entity, extras):
         self.entity = entity
         self.extras = extras

@@ -34,6 +34,7 @@ class StateUpdater(Thread):
         entity = self.results_q.get()[0]['entity']
         LOG.debug('Received entity on the queue...')
         LOG.debug('Updating entity state')
+        # this param should be provided
         entity.attributes['mcn.service.state'] = 'provisioning'
         LOG.debug('Updating entity in registry')
         self.registry.add_resource(key=entity.identifier, resource=entity, extras=None)
@@ -52,9 +53,9 @@ class Executor(multiprocessing.Process):
         task = self.task_queue.get()
         LOG.debug('task received')
         #blocking op
-        LOG.debug('running task...')
+        LOG.debug('running async task...')
         res = task.run()
-        LOG.debug('sending result...')
+        LOG.debug('sending async result...')
         self.result_queue.put(res)
 
 class ProMgr():
@@ -64,25 +65,16 @@ class ProMgr():
         self.executors = []
 
         # create i/o queues
-        LOG.debug('creating task in queues...')
-        self.create_tasks = multiprocessing.Queue()
-        self.deploy_tasks = multiprocessing.Queue()
-        self.retrieve_tasks = multiprocessing.Queue()
-        self.destroy_tasks = multiprocessing.Queue()
+        LOG.debug('creating async task in queues...')
+        self.async_tasks = multiprocessing.Queue()
 
-        LOG.debug('creating task return queues...')
-        self.create_ret_vals = multiprocessing.Queue()
-        self.deploy_ret_vals = multiprocessing.Queue()
-        self.retrieve_ret_vals = multiprocessing.Queue()
-        self.destroy_ret_vals = multiprocessing.Queue()
+        LOG.debug('creating async task return queues...')
+        self.async_ret_vals = multiprocessing.Queue()
 
     def run(self):
         LOG.debug('creating executors...')
-        self.executors = self.executors + [ Executor('creator', self.create_tasks, self.create_ret_vals) for i in xrange(self.num_executors)]
-        self.executors = self.executors + [ Executor('deployer', self.deploy_tasks, self.deploy_ret_vals) for i in xrange(self.num_executors)]
-        self.executors = self.executors + [ Executor('retriever', self.retrieve_tasks, self.retrieve_ret_vals) for i in xrange(self.num_executors)]
-        self.executors = self.executors + [ Executor('destroyer', self.destroy_tasks, self.destroy_ret_vals) for i in xrange(self.num_executors)]
+        self.executors = [ Executor('creator', self.async_tasks, self.async_ret_vals) for i in xrange(self.num_executors)]
 
-        LOG.debug('number of executors to start: ' + str(len(self.executors)))
+        LOG.debug('number of async executors to start: ' + str(len(self.executors)))
         for executor in self.executors:
             executor.start()
