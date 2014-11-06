@@ -64,7 +64,7 @@ class Task():
         raise NotImplemented()
 
 
-class CreateSO(Task):
+class InitSO(Task):
 
     def __init__(self, entity, extras):
         Task.__init__(self, entity, extras)
@@ -75,7 +75,7 @@ class CreateSO(Task):
 
     #@ConditionalDecorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def run(self):
-        self.entity.attributes['mcn.service.state'] = 'creating'
+        self.entity.attributes['mcn.service.state'] = 'initialising'
         LOG.debug('Ensuring SM SSH Key...')
         self.__ensure_ssh_key()
 
@@ -85,7 +85,7 @@ class CreateSO(Task):
             self.entity.extras = {}
         self.entity.extras['repo_uri'] = self.__create_app()
 
-        self.entity.attributes['mcn.service.state'] = 'created'
+        self.entity.attributes['mcn.service.state'] = 'initialised'
 
         return self.entity, self.extras
 
@@ -228,7 +228,7 @@ class ActivateSO(Task):
         # TODO: send `entity`'s attributes along with the call to deploy
         try:
             r = requests.put(url, headers=heads)
-            r.raise_for_status() #try catch: HTTPError, close process
+            r.raise_for_status()
         except requests.HTTPError as err:
             LOG.error('HTTP Error: should do something more here!' + err.message)
             raise err

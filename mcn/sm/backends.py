@@ -18,7 +18,7 @@ __author__ = 'andy'
 from occi.backend import ActionBackend, KindBackend
 
 from mcn.sm.so_manager import AsychExe
-from mcn.sm.so_manager import CreateSO
+from mcn.sm.so_manager import InitSO
 from mcn.sm.so_manager import ActivateSO
 from mcn.sm.so_manager import DeploySO
 from mcn.sm.so_manager import ProvisionSO
@@ -27,9 +27,8 @@ from mcn.sm.so_manager import DestroySO
 
 #service state model:
 #  - init
-#  - creating
-#  - deploying
-#  - provisioning
+#  - deploy
+#  - provision
 #  - active (entered into runtime ops)
 #  - destroying
 #  - failed
@@ -46,7 +45,7 @@ class ServiceBackend(KindBackend, ActionBackend):
     def create(self, entity, extras):
         super(ServiceBackend, self).create(entity, extras)
         # create the python container
-        entity, extras = CreateSO(entity, extras).run()
+        entity, extras = InitSO(entity, extras).run()
         # run background tasks
         bg_tasks = AsychExe([ActivateSO(entity, extras), DeploySO(entity, extras),
                              ProvisionSO(entity, extras)], self.registry).start()

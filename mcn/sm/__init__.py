@@ -59,7 +59,7 @@ def timeit(method):
 
 
 def config_logger(log_level=logging.DEBUG):
-    logging.basicConfig(format='%(levelname)s %(asctime)s: %(message)s',
+    logging.basicConfig(format='%(levelname)s %(asctime)s: \t%(message)s',
                         datefmt='%m/%d/%Y %I:%M:%S %p',
                         log_level=log_level)
     logger = logging.getLogger(__name__)
