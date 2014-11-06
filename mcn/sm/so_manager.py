@@ -23,37 +23,70 @@ import random
 import requests
 import shutil
 import tempfile
+from threading import Thread
 from urlparse import urlparse
 
 from mcn.sm import CONFIG
 from mcn.sm import LOG
-from mcn.sm import timeit, ConditionalDecorator, DOING_PERFORMANCE_ANALYSIS
 
 
 HTTP = 'http://'
 
 
-class CreateSOTask():
+class AsychExe(Thread):
+    """
+    Only purpose of this thread is to execute a list of tasks sequentially
+    as a background "thread".
+    """
+    def __init__(self, registry, tasks):
+        super(AsychExe, self).__init__()
+        self.registry = registry
+        self.tasks = tasks
+
+    def run(self):
+        super(AsychExe, self).run()
+        LOG.debug('Starting AsychExe thread')
+
+        for task in self.tasks:
+            entity, extras = task.run()
+            LOG.debug('Updating entity in registry')
+            self.registry.add_resource(key=entity.identifier, resource=entity, extras=extras)
+
+
+class Task():
 
     def __init__(self, entity, extras):
         self.entity = entity
         self.extras = extras
+
+    def run(self):
+        raise NotImplemented()
+
+
+class CreateSOTask(Task):
+
+    def __init__(self, entity, extras):
+        Task.__init__(self, entity, extras)
         self.nburl = CONFIG.get('cloud_controller', 'nb_api', '')
         if self.nburl[-1] == '/':
             self.nburl = self.nburl[0:-1]
         LOG.info('CloudController Northbound API: ' + self.nburl)
 
-    @ConditionalDecorator(timeit, DOING_PERFORMANCE_ANALYSIS)
+    #@ConditionalDecorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def run(self):
+        self.entity.attributes['mcn.service.state'] = 'creating'
         LOG.debug('Ensuring SM SSH Key...')
         self.__ensure_ssh_key()
 
         # create an app for the new SO instance
         LOG.debug('Creating SO container...')
-        repo_uri = self.__create_app()
+        if not self.entity.extras:
+            self.entity.extras = {}
+        self.entity.extras['repo_uri'] = self.__create_app()
 
-        #send back the repo URI and new resource id
-        return {'repo_uri': repo_uri, 'entity': self.entity}
+        self.entity.attributes['mcn.service.state'] = 'created'
+
+        return self.entity, self.extras
 
     def __create_app(self):
 
@@ -150,34 +183,29 @@ class CreateSOTask():
             return key_name, key_content
 
 
-class DeploySOTask():
+class ActivateSOTask(Task):
 
     def __init__(self, entity, extras):
-        self.entity = entity
-        self.extras = extras
+        Task.__init__(self, entity, extras)
         self.repo_uri = self.entity.extras['repo_uri']
-
+        self.host = urlparse(self.repo_uri).netloc.split('@')[1]
         if os.system('which git') != 0:
             raise EnvironmentError('Git is not available.')
 
-    @ConditionalDecorator(timeit, DOING_PERFORMANCE_ANALYSIS)
+    # @ConditionalDecorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def run(self):
         # get the code of the bundle and push it to the git facilities
         # offered by OpenShift
+        self.entity.attributes['mcn.service.state'] = 'activating'
         LOG.debug('Deploying SO Bundle to: ' + self.repo_uri)
-        self.__deploy_app(self.repo_uri)
+        self.__deploy_app()
 
-        host = urlparse(self.repo_uri).netloc.split('@')[1]
+        LOG.debug('Activating the SO...')
+        self.__init_so()
 
-        LOG.debug('Creating the SO...')
-        self.__init_so(host)
+        self.entity.attributes['mcn.service.state'] = 'activated'
 
-        # Deployment is done without any control by the client...
-        # otherwise we won't be able to hand back a working service!
-        LOG.debug('Deploying the SO bundle...')
-        self.__deploy_so(host)
-
-        return {'entity': self.entity}
+        return self.entity, self.extras
 
     # example request to the SO
     # curl -v -X PUT http://localhost:8051/orchestrator/default \
@@ -185,8 +213,8 @@ class DeploySOTask():
     #   -H 'Category: orchestrator; scheme="http://schemas.mobile-cloud-networking.eu/occi/service#"' \
     #   -H 'X-Auth-Token: '$KID \
     #   -H 'X-Tenant-Name: '$TENANT
-    def __init_so(self, host):
-        url = HTTP + host + '/orchestrator/default'
+    def __init_so(self):
+        url = HTTP + self.host + '/orchestrator/default'
         heads = {
             'Category': 'orchestrator; scheme="http://schemas.mobile-cloud-networking.eu/occi/service#"',
             'Content-Type': 'text/occi',
@@ -202,38 +230,9 @@ class DeploySOTask():
             r.raise_for_status() #try catch: HTTPError, close process
         except requests.HTTPError as err:
             LOG.error('HTTP Error: should do something more here!' + err.message)
+            raise err
 
-    # example request to the SO
-    # curl -v -X POST http://localhost:8051/orchestrator/default?action=deploy \
-    #   -H 'Content-Type: text/occi' \
-    #   -H 'Category: deploy; scheme="http://schemas.mobile-cloud-networking.eu/occi/service#"' \
-    #   -H 'X-Auth-Token: '$KID \
-    #   -H 'X-Tenant-Name: '$TENANT
-    def __deploy_so(self, host):
-        url = HTTP + host + '/orchestrator/default'
-        params = {'action': 'deploy'}
-        heads = {
-            'Category': 'deploy; scheme="http://schemas.mobile-cloud-networking.eu/occi/service#"',
-            'Content-Type': 'text/occi',
-            'X-Auth-Token': self.extras['token'],
-            'X-Tenant-Name': self.extras['tenant_name']}
-        LOG.debug('Deploying SO with: ' + url)
-        LOG.info('Sending headers: ' + heads.__repr__())
-
-        try:
-            r = requests.post(url, headers=heads, params=params)
-            r.raise_for_status()
-        except requests.HTTPError as err:
-            LOG.error('HTTP Error: should do something more here!' + err.message)
-
-        # Store the stack id. This should not be shown to the EEU.
-        if r.content == 'Please initialize SO with token and tenant first.':
-            self.entity.attributes['mcn.service.state'] = 'failed'
-            raise Exception('Error deploying the SO')
-        else:
-            LOG.debug('SO Deployed ')
-
-    def __deploy_app(self, repo):
+    def __deploy_app(self):
         """
             Deploy the local SO bundle
             assumption here
@@ -242,8 +241,8 @@ class DeploySOTask():
         """
         # create temp dir...and clone the remote repo provided by OpS
         dir = tempfile.mkdtemp()
-        LOG.debug('Cloning git repository: ' + repo + ' to: ' + dir)
-        cmd = ' '.join(['git', 'clone', repo, dir])
+        LOG.debug('Cloning git repository: ' + self.repo_uri + ' to: ' + dir)
+        cmd = ' '.join(['git', 'clone', self.repo_uri, dir])
         os.system(cmd)
 
         # Get the SO bundle
@@ -288,27 +287,90 @@ class DeploySOTask():
         os.system(' '.join(['chmod', '+x', os.path.join(dir, '.openshift', 'action_hooks', '*')]))
 
 
-class ProvisionSOTask():
-    # TODO
-    def __init__(self):
-        pass
+class DeploySOTask(Task):
 
-
-class RetrieveSOTask():
     def __init__(self, entity, extras):
-        self.entity = entity
-        self.extras = extras
+        Task.__init__(self, entity, extras)
+        self.repo_uri = self.entity.extras['repo_uri']
+        self.host = urlparse(self.repo_uri).netloc.split('@')[1]
+
+    # example request to the SO
+    # curl -v -X POST http://localhost:8051/orchestrator/default?action=deploy \
+    #   -H 'Content-Type: text/occi' \
+    #   -H 'Category: deploy; scheme="http://schemas.mobile-cloud-networking.eu/occi/service#"' \
+    #   -H 'X-Auth-Token: '$KID \
+    #   -H 'X-Tenant-Name: '$TENANT
+    def run(self):
+        # Deployment is done without any control by the client...
+        # otherwise we won't be able to hand back a working service!
+        self.entity.attributes['mcn.service.state'] = 'deploying'
+        LOG.debug('Deploying the SO bundle...')
+        url = HTTP + self.host + '/orchestrator/default'
+        params = {'action': 'deploy'}
+        heads = {
+            'Category': 'deploy; scheme="http://schemas.mobile-cloud-networking.eu/occi/service#"',
+            'Content-Type': 'text/occi',
+            'X-Auth-Token': self.extras['token'],
+            'X-Tenant-Name': self.extras['tenant_name']}
+        LOG.debug('Deploying SO with: ' + url)
+        LOG.info('Sending headers: ' + heads.__repr__())
+
+        try:
+            r = requests.post(url, headers=heads, params=params)
+            r.raise_for_status()
+        except requests.HTTPError as err:
+            LOG.error('HTTP Error: should do something more here!' + err.message)
+            raise err
+        self.entity.attributes['mcn.service.state'] = 'deployed'
+        LOG.debug('SO Deployed ')
+        return self.entity, self.extras
+
+
+class ProvisionSOTask(Task):
+
+    def __init__(self, entity, extras):
+        Task.__init__(self, entity, extras)
+        self.repo_uri = self.entity.extras['repo_uri']
+        self.host = urlparse(self.repo_uri).netloc.split('@')[1]
+
+    def run(self):
+        self.entity.attributes['mcn.service.state'] = 'provisioning'
+        url = HTTP + self.host + '/orchestrator/default'
+        params = {'action': 'provision'}
+        heads = {
+            'Category': 'provision; scheme="http://schemas.mobile-cloud-networking.eu/occi/service#"',
+            'Content-Type': 'text/occi',
+            'X-Auth-Token': self.extras['token'],
+            'X-Tenant-Name': self.extras['tenant_name']}
+        LOG.debug('Provisioning SO with: ' + url)
+        LOG.info('Sending headers: ' + heads.__repr__())
+
+        try:
+            r = requests.post(url, headers=heads, params=params)
+            r.raise_for_status()
+        except requests.HTTPError as err:
+            LOG.error('HTTP Error: should do something more here!' + err.message)
+            raise err
+
+        self.entity.attributes['mcn.service.state'] = 'provisioned'
+        return self.entity, self.extras
+
+
+class RetrieveSOTask(Task):
+
+    def __init__(self, entity, extras):
+        Task.__init__(self, entity, extras)
         repo_uri = self.entity.extras['repo_uri']
         self.host = urlparse(repo_uri).netloc.split('@')[1]
 
-    @ConditionalDecorator(timeit, DOING_PERFORMANCE_ANALYSIS)
+    # @ConditionalDecorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def run(self):
         # example request to the SO
         # curl -v -X GET http://localhost:8051/orchestrator/default \
         #   -H 'X-Auth-Token: '$KID \
         #   -H 'X-Tenant-Name: '$TENANT
 
-        if self.entity.attributes['mcn.service.state'] in ['deploying', 'provisioning']:
+        if self.entity.attributes['mcn.service.state'] in ['activated', 'deployed', 'provisioned']:
             heads = {
                 'Content-Type': 'text/occi',
                 'Accept': 'text/occi',
@@ -321,6 +383,7 @@ class RetrieveSOTask():
                 r.raise_for_status()
             except requests.HTTPError as err:
                 LOG.error('HTTP Error: should do something more here!' + err.message)
+                raise err
 
             attrs = r.headers['x-occi-attribute'].split(', ')
             for attr in attrs:
@@ -331,19 +394,19 @@ class RetrieveSOTask():
                     self.entity.attributes[kv[0]] = kv[1]
                     LOG.debug('OCCI Attribute: ' + kv[0] + ' --> ' + kv[1])
         else:
-            LOG.debug('Cannot get entity as it is not in the deploying or provisioning state')
-        return {'entity':self.entity}
+            LOG.debug('Cannot GET entity as it is not in the activated, deployed or provisioned state')
+
+        return self.entity, self.extras
 
 
-class DestroySOTask():
+class DestroySOTask(Task):
     def __init__(self, entity, extras):
-        self.entity = entity
-        self.extras = extras
+        Task.__init__(self, entity, extras)
         self.nburl = CONFIG.get('cloud_controller', 'nb_api', '')
         repo_uri = self.entity.extras['repo_uri']
         self.host = urlparse(repo_uri).netloc.split('@')[1]
 
-    @ConditionalDecorator(timeit, DOING_PERFORMANCE_ANALYSIS)
+    # @ConditionalDecorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def run(self):
         # 1. dispose the active SO, essentially kills the STG/ITG
         # 2. dispose the resources used to run the SO
@@ -362,6 +425,7 @@ class DestroySOTask():
             r.raise_for_status()  # TODO if error report verbosely and perform recovery
         except requests.HTTPError as err:
             LOG.error('HTTP Error: should do something more here!' + err.message)
+            raise err
 
         url = self.nburl + self.entity.identifier.replace('/' + self.entity.kind.term + '/', '/app/')
         heads = {'Content-Type': 'text/occi',
@@ -370,6 +434,8 @@ class DestroySOTask():
         LOG.info('Disposing service orchestrator container via CC... ' + url)
         LOG.info('Sending headers: ' + heads.__repr__())
         _do_cc_request('DELETE', url, heads)
+
+        return self.entity, self.extras
 
 
 def _do_cc_request(verb, url, heads):
@@ -394,6 +460,7 @@ def _do_cc_request(verb, url, heads):
             r.raise_for_status() # TODO if error report verbosely and perform recovery
             return r
         except requests.HTTPError as err:
-                LOG.error('HTTP Error: should do something more here!' + err.message)
+            LOG.error('HTTP Error: should do something more here!' + err.message)
+            raise err
     else:
         LOG.error('Supplied verb is unknown: ' + verb)
