@@ -1,7 +1,7 @@
 # Copyright 2014 Zuercher Hochschule fuer Angewandte Wissenschaften
 # All Rights Reserved.
 #
-#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
 #    a copy of the License at
 #
@@ -17,24 +17,50 @@ __author__ = 'andy'
 
 from occi.backend import ActionBackend, KindBackend
 
-from mcn.sm.so_manager import SOManager
+from mcn.sm.so_manager import ServiceParameters
+from mcn.sm.so_manager import AsychExe
+from mcn.sm.so_manager import InitSO
+from mcn.sm.so_manager import ActivateSO
+from mcn.sm.so_manager import DeploySO
+from mcn.sm.so_manager import ProvisionSO
+from mcn.sm.so_manager import RetrieveSO
+from mcn.sm.so_manager import DestroySO
+
+#service state model:
+# - initialise
+# - activate
+# - deploy
+# - provision
+# - active (entered into runtime ops)
+# - destroying
+# - failed
 
 
 class ServiceBackend(KindBackend, ActionBackend):
-    '''
+    """
     Provides the basic functionality required to CRUD SOs
-    '''
-
-    def __init__(self):
-        self.som = SOManager()
+    """
+    def __init__(self, app):
+        self.registry = app.registry
+        self.srv_prms = ServiceParameters()
 
     def create(self, entity, extras):
         super(ServiceBackend, self).create(entity, extras)
-        self.som.deploy(entity, extras)
+        extras['srv_prms'] = self.srv_prms
+        # create the SO container
+        InitSO(entity, extras).run()
+        # run background tasks
+        AsychExe([ActivateSO(entity, extras), DeploySO(entity, extras),
+                  ProvisionSO(entity, extras)], self.registry).start()
 
     def retrieve(self, entity, extras):
         super(ServiceBackend, self).retrieve(entity, extras)
-        self.som.so_details(entity, extras)
+        RetrieveSO(entity, extras).run()
+
+    def delete(self, entity, extras):
+        super(ServiceBackend, self).delete(entity, extras)
+        extras['srv_prms'] = self.srv_prms
+        AsychExe([DestroySO(entity, extras)]).start()
 
     def update(self, old, new, extras):
         raise NotImplementedError()
@@ -42,14 +68,6 @@ class ServiceBackend(KindBackend, ActionBackend):
     def replace(self, old, new, extras):
         raise NotImplementedError()
 
-    def delete(self, entity, extras):
-        super(ServiceBackend, self).delete(entity, extras)
-        self.som.dispose(entity, extras)
-
     # currently not exposed on the kind
     def action(self, entity, action, attributes, extras):
         raise NotImplementedError()
-        # super(ServiceBackend, self).action(entity, action, attributes, extras)
-        # if action == 'provision':
-        #     #pass service_instance_id here
-        #     self.som.provision(entity, extras)
