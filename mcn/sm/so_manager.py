@@ -73,7 +73,6 @@ class InitSO(Task):
             self.nburl = self.nburl[0:-1]
         LOG.info('CloudController Northbound API: ' + self.nburl)
 
-    #@ConditionalDecorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def run(self):
         self.entity.attributes['mcn.service.state'] = 'initialising'
         LOG.debug('Ensuring SM SSH Key...')
@@ -196,7 +195,6 @@ class ActivateSO(Task):
         if os.system('which git') != 0:
             raise EnvironmentError('Git is not available.')
 
-    # @ConditionalDecorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def run(self):
         # get the code of the bundle and push it to the git facilities
         # offered by OpenShift
@@ -367,7 +365,6 @@ class RetrieveSO(Task):
         repo_uri = self.entity.extras['repo_uri']
         self.host = urlparse(repo_uri).netloc.split('@')[1]
 
-    # @ConditionalDecorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def run(self):
         # example request to the SO
         # curl -v -X GET http://localhost:8051/orchestrator/default \
@@ -411,7 +408,6 @@ class DestroySO(Task):
         repo_uri = self.entity.extras['repo_uri']
         self.host = urlparse(repo_uri).netloc.split('@')[1]
 
-    # @ConditionalDecorator(timeit, DOING_PERFORMANCE_ANALYSIS)
     def run(self):
         # 1. dispose the active SO, essentially kills the STG/ITG
         # 2. dispose the resources used to run the SO
