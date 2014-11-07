@@ -73,73 +73,91 @@ class Service():
         self.app = app
         self.service_backend = ServiceBackend(app)
         self.srv_type = srv_type
+        self.reg_srv = CONFIG.getboolean('service_manager_admin', 'register_service')
+        if self.reg_srv:
+            self.srv_ep = None
+            self.ep = None
+            self.token, self.tenant_name = self.get_service_credentials()
+            self.design_uri = CONFIG.get('service_manager', 'design_uri', '')
+            if self.design_uri == '':
+                LOG.fatal('No design_uri parameter supplied in sm.cfg')
+                raise Exception('No design_uri parameter supplied in sm.cfg')
+            self.region = CONFIG.get('service_manager_admin', 'region', '')
+            if self.region == '':
+                LOG.info('No region parameter specified in sm.cfg, defaulting to RegionOne')
+                self.region = 'RegionOne'
+            self.service_endpoint = CONFIG.get('service_manager_admin', 'service_endpoint')
+            if self.service_endpoint == '':
+                LOG.fatal('No service_endpoint parameter supplied in sm.cfg')
+                raise Exception()
+
+    def get_service_credentials(self):
+
+        token = CONFIG.get('service_manager_admin', 'service_token', '')
+        if token == '':
+            raise Exception('No service_token parameter supplied in sm.cfg')
+        tenant_name = CONFIG.get('service_manager_admin', 'service_tenant_name', '')
+        if tenant_name == '':
+            raise Exception('No tenant_name parameter supplied in sm.cfg')
+
+        return token, tenant_name
 
     def register_extension(self, mixin, backend):
         self.app.register_backend(mixin, backend)
 
+    # TODO this functionality should be moved over to the SDK or put in the CC API
+    def register_service(self):
+
+        self.srv_ep = util.services.get_service_endpoint(identifier=self.srv_type.term, token=self.token,
+                                                         endpoint=self.design_uri, tenant_name=self.tenant_name,
+                                                         url_type='public')
+
+        if self.srv_ep is None or self.srv_ep == '':
+            LOG.debug('Registering the service with the keystone service...')
+
+            keystone = client.Client(token=self.token, tenant_name=self.tenant_name, auth_url=self.design_uri)
+
+            # taken from the kind definition
+            self.srv_ep = keystone.services.create(self.srv_type.scheme+self.srv_type.term,
+                                         self.srv_type.scheme+self.srv_type.term,
+                                         self.srv_type.title)
+
+            internal_url = admin_url = public_url = self.service_endpoint
+
+            self.ep = keystone.endpoints.create(self.region, self.srv_ep.id, public_url, admin_url, internal_url)
+            LOG.info('Service is now registered with keystone: ' +
+                      'Region: ' + self.ep.region +
+                      ' Public URL:' + self.ep.publicurl +
+                      ' Service ID: ' + self.srv_ep.id +
+                      ' Endpoint ID: ' + self.ep.id)
+        else:
+            LOG.info('Service is already registered with keystone. Service endpoint is: ' + self.srv_ep)
+
+    def shutdown_handler(self, signum = None, frame = None):
+        LOG.info('Service shutting down... ')
+        if self.reg_srv:
+            self.deregister_service()
+        sys.exit(0)
+
+    # TODO this functionality should be moved over to the SDK or put in the CC API
+    def deregister_service(self):
+
+        if self.srv_ep:
+            LOG.debug('De-registering the service with the keystone service...')
+            keystone = client.Client(token=self.token, tenant_name=self.tenant_name, auth_url=self.design_uri)
+            keystone.services.delete(self.srv_ep.id)  # deletes endpoint too
+
+    # TODO should use a better WSGI implementation
     def run(self):
         self.app.register_backend(self.srv_type, self.service_backend)
 
-        # TODO fix for if param not present in config file
-        reg_srv = CONFIG.getboolean('service_manager_admin', 'register_service')
-        if reg_srv:
-            register_service(self.srv_type)
+        if self.reg_srv:
+            self.register_service()
 
+        # setup shutdown handler for deregistration of service
         for sig in [signal.SIGTERM, signal.SIGINT, signal.SIGHUP, signal.SIGQUIT]:
-            signal.signal(sig, shutdown_handler)
+            signal.signal(sig, self.shutdown_handler)
 
         LOG.info('Service Manager running on interfaces, running on port: ' + CONFIG.get('general', 'port'))
         httpd = make_server('', int(CONFIG.get('general', 'port')), self.app)
         httpd.serve_forever()
-
-
-def shutdown_handler(signum = None, frame = None):
-    LOG.info('Signal handler called with signal ' + str(signum))
-    deregister_service()
-    sys.exit(0)
-
-
-# TODO this functionality should be moved over to the SDK or put in the CC API
-def register_service(self, srv_type):
-    ep = None
-    design_uri = CONFIG.get('service_manager', 'design_uri', '')
-    if design_uri == '':
-        raise Exception('No design_uri parameter supplied in sm.cfg')
-    token = CONFIG.get('service_manager_admin', 'service_token', '')
-    if token == '':
-        raise Exception('No service_token parameter supplied in sm.cfg')
-    tenant_name = CONFIG.get('service_manager_admin', 'service_tenant_name', '')
-    if tenant_name == '':
-        raise Exception('No tenant_name parameter supplied in sm.cfg')
-
-    srv_ep = util.services.get_service_endpoint(identifier=srv_type.term, token=token, endpoint=design_uri,
-                                                tenant_name=tenant_name, url_type='public')
-    if srv_ep is None or srv_ep == '':
-        LOG.debug('Registering the service with the keystone service...')
-
-        keystone = client.Client(token=token, tenant_name=tenant_name, auth_url=design_uri)
-
-        # taken from the kind definition
-        s = keystone.services.create(srv_type.scheme+srv_type.term, srv_type.scheme+srv_type.term, srv_type.title)
-
-        region = CONFIG.get('service_manager_admin', 'region', '')
-        if region == '':
-            LOG.info('No region parameter specified in sm.cfg, defaulting to RegionOne')
-            region = 'RegionOne'
-        service_endpoint = CONFIG.get('service_manager_admin', 'service_endpoint')
-        if service_endpoint == '':
-            raise Exception('No service_endpoint parameter supplied in sm.cfg')
-
-        internal_url = admin_url = public_url = service_endpoint
-
-        ep = keystone.endpoints.create(region, s.id, public_url, admin_url, internal_url)
-        LOG.debug('Service is now registered with keystone: ID: ' + ep.id + ' Region: ' + ep.region + ' Public URL:\
-                    ' + ep.publicurl + ' Service ID: '+s.id)
-    else:
-        LOG.debug('Service is already registered with keystone. Service endpoint is: ' + srv_ep)
-
-    return ep
-
-
-def deregister_service():
-    pass

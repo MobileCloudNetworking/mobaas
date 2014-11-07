@@ -45,14 +45,14 @@ class ServiceBackend(KindBackend, ActionBackend):
     def create(self, entity, extras):
         super(ServiceBackend, self).create(entity, extras)
         # create the python container
-        entity, extras = InitSO(entity, extras).run()
+        InitSO(entity, extras).run()
         # run background tasks
-        bg_tasks = AsychExe([ActivateSO(entity, extras), DeploySO(entity, extras),
+        AsychExe([ActivateSO(entity, extras), DeploySO(entity, extras),
                              ProvisionSO(entity, extras)], self.registry).start()
 
     def retrieve(self, entity, extras):
         super(ServiceBackend, self).retrieve(entity, extras)
-        entity, extras = RetrieveSO(entity, extras).run()
+        RetrieveSO(entity, extras).run()
 
     def delete(self, entity, extras):
         super(ServiceBackend, self).delete(entity, extras)
