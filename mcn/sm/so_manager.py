@@ -265,12 +265,13 @@ class ActivateSO(Task):
     def run(self):
         # get the code of the bundle and push it to the git facilities
         # offered by OpenShift
-        self.entity.attributes['mcn.service.state'] = 'activate'
         LOG.debug('Deploying SO Bundle to: ' + self.repo_uri)
         self.__deploy_app()
 
         LOG.debug('Activating the SO...')
         self.__init_so()
+
+        self.entity.attributes['mcn.service.state'] = 'activate'
 
         return self.entity, self.extras
 
@@ -374,7 +375,6 @@ class DeploySO(Task):
     def run(self):
         # Deployment is done without any control by the client...
         # otherwise we won't be able to hand back a working service!
-        self.entity.attributes['mcn.service.state'] = 'deploy'
         LOG.debug('Deploying the SO bundle...')
         url = HTTP + self.host + '/orchestrator/default'
         params = {'action': 'deploy'}
@@ -397,6 +397,7 @@ class DeploySO(Task):
             LOG.error('HTTP Error: should do something more here!' + err.message)
             raise err
 
+        self.entity.attributes['mcn.service.state'] = 'deploy'
         LOG.debug('SO Deployed ')
         return self.entity, self.extras
 
@@ -408,7 +409,6 @@ class ProvisionSO(Task):
         self.host = urlparse(self.repo_uri).netloc.split('@')[1]
 
     def run(self):
-        self.entity.attributes['mcn.service.state'] = 'provision'
         url = HTTP + self.host + '/orchestrator/default'
         params = {'action': 'provision'}
         heads = {
@@ -430,6 +430,7 @@ class ProvisionSO(Task):
             LOG.error('HTTP Error: should do something more here!' + err.message)
             raise err
 
+        self.entity.attributes['mcn.service.state'] = 'provision'
         return self.entity, self.extras
 
 
