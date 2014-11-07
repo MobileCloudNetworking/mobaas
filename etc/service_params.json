@@ -22,22 +22,23 @@
 		{
 			"name": "init_value",
 			"value": "immutable_init_value",
-			"type": "immutable"},
+			"type": "string"
+        },
 		{
 			"name": "init_value",
 			"value": "immutable_init_value",
-			"type": "immutable"
+			"type": "string"
 		}
 	],
 	"provision":[
 		{
 			"name": "init_value",
 			"value": "immutable_init_value",
-			"type": "immutable"},
+			"type": "string"},
 		{
 			"name": "init_value",
 			"value": "immutable_init_value",
-			"type": "immutable"
+			"type": "string"
 		}
 	]
 }

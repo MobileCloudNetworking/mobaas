@@ -37,8 +37,7 @@ HTTP = 'http://'
 
 
 class ServiceParameters():
-    def __init__(self, state=''):
-        self.state = state
+    def __init__(self):
         self.service_params = {}
         service_params_file_path = CONFIG.get('service_manager', 'service_params', '')
         if len(service_params_file_path) > 0:
@@ -54,17 +53,19 @@ class ServiceParameters():
 
     def service_parameters(self, state='', content_type='text/occi'):
         if content_type == 'text/occi':
-            params = {}
+            params = []
             try:
-                params = self.service_params[self.state]
+                params = self.service_params[state]
+                for p in self.service_params['client_params']:
+                    params.append(p)
             except KeyError as err:
-                LOG.error('The requested states parameters are not available: ' + self.state + ' <- not known')
-                return {}
+                LOG.error('The requested states parameters are not available: ' + state + ' <- not known')
+                return []
 
             header = ''
             for param in params:
                 if param['type'] == 'string':
-                    value = '"'+param['value']+'"'
+                    value = '"' + param['value'] + '"'
                 else:
                     value = str(param['value'])
 
@@ -73,12 +74,28 @@ class ServiceParameters():
         else:
             LOG.error('Content type not supported: ' + content_type)
 
+    def add_client_params(self, params={}):
 
-# if __name__ == '__main__':
-#     sp = ServiceParameters('initialise')
-#     p = sp.service_parameters()
-#     print p
-#     print len(p)
+        client_params = []
+
+        for k,v in params.items():
+            type = 'number'
+            if (v.startswith('"') or v.startswith('\'')) and (v.endswith('"') or v.endswith('\'')):
+                type = 'string'
+                v = v[1:-1]
+            param = {'name': k, 'value': v, 'type': type}
+
+            client_params.append(param)
+
+        self.service_params['client_params'] = client_params
+
+
+if __name__ == '__main__':
+    sp = ServiceParameters()
+    sp.add_client_params({'test': '1', 'test.test':'"astring"'})
+    p = sp.service_parameters('initialise')
+    print p
+    print len(p)
 
 
 class AsychExe(Thread):
@@ -108,7 +125,6 @@ class Task():
         self.entity = entity
         self.extras = extras
         self.state = state
-        self.service_params = ServiceParameters(self.state)
 
     def run(self):
         raise NotImplemented()
@@ -122,6 +138,10 @@ class InitSO(Task):
         if self.nburl[-1] == '/':
             self.nburl = self.nburl[0:-1]
         LOG.info('CloudController Northbound API: ' + self.nburl)
+        if len(entity.attributes) > 0:
+            LOG.info('Client supplied parameters: ' + entity.attributes.__repr__())
+            #TODO check that these parameters are valid according to the kind specification
+            self.extras['srv_prms'].add_client_params(entity.attributes)
 
     def run(self):
         self.entity.attributes['mcn.service.state'] = 'initialise'
@@ -323,7 +343,7 @@ class ActivateSO(Task):
             'X-Tenant-Name': self.extras['tenant_name'],
         }
 
-        occi_attrs = self.service_params.service_parameters()
+        occi_attrs = self.extras['srv_prms'].service_parameters(self.state)
         if len(occi_attrs) > 0:
             LOG.info('Adding service-specific parameters to call... X-OCCI-Attribute: ' + occi_attrs)
             heads['X-OCCI-Attribute'] = occi_attrs
@@ -363,7 +383,7 @@ class DeploySO(Task):
             'Content-Type': 'text/occi',
             'X-Auth-Token': self.extras['token'],
             'X-Tenant-Name': self.extras['tenant_name']}
-        occi_attrs = self.service_params.service_parameters()
+        occi_attrs = self.extras['srv_prms'].service_parameters(self.state)
         if len(occi_attrs) > 0:
             LOG.info('Adding service-specific parameters to call... X-OCCI-Attribute:' + occi_attrs)
             heads['X-OCCI-Attribute'] = occi_attrs
@@ -396,7 +416,7 @@ class ProvisionSO(Task):
             'Content-Type': 'text/occi',
             'X-Auth-Token': self.extras['token'],
             'X-Tenant-Name': self.extras['tenant_name']}
-        occi_attrs = self.service_params.service_parameters()
+        occi_attrs = self.extras['srv_prms'].service_parameters(self.state)
         if len(occi_attrs) > 0:
             LOG.info('Adding service-specific parameters to call... X-OCCI-Attribute:' + occi_attrs)
             heads['X-OCCI-Attribute'] = occi_attrs
@@ -473,7 +493,7 @@ class DestroySO(Task):
         url = HTTP + self.host + '/orchestrator/default'
         heads = {'X-Auth-Token': self.extras['token'],
                  'X-Tenant-Name': self.extras['tenant_name']}
-        occi_attrs = self.service_params.service_parameters()
+        occi_attrs = self.extras['srv_prms'].service_parameters(self.state)
         if len(occi_attrs) > 0:
             LOG.info('Adding service-specific parameters to call... X-OCCI-Attribute:' + occi_attrs)
             heads['X-OCCI-Attribute'] = occi_attrs

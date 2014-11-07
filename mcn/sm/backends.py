@@ -17,6 +17,7 @@ __author__ = 'andy'
 
 from occi.backend import ActionBackend, KindBackend
 
+from mcn.sm.so_manager import ServiceParameters
 from mcn.sm.so_manager import AsychExe
 from mcn.sm.so_manager import InitSO
 from mcn.sm.so_manager import ActivateSO
@@ -39,20 +40,18 @@ class ServiceBackend(KindBackend, ActionBackend):
     """
     Provides the basic functionality required to CRUD SOs
     """
-
     def __init__(self, app):
         self.registry = app.registry
+        self.srv_prms = ServiceParameters()
 
     def create(self, entity, extras):
         super(ServiceBackend, self).create(entity, extras)
-        # TODO look to see if EEU parameters are in the request
-        #      if there are parameters add them to the configinjector
-
-        # create the python container
+        extras['srv_prms'] = self.srv_prms
+        # create the SO container
         InitSO(entity, extras).run()
         # run background tasks
         AsychExe([ActivateSO(entity, extras), DeploySO(entity, extras),
-                             ProvisionSO(entity, extras)], self.registry).start()
+                  ProvisionSO(entity, extras)], self.registry).start()
 
     def retrieve(self, entity, extras):
         super(ServiceBackend, self).retrieve(entity, extras)
@@ -60,6 +59,7 @@ class ServiceBackend(KindBackend, ActionBackend):
 
     def delete(self, entity, extras):
         super(ServiceBackend, self).delete(entity, extras)
+        extras['srv_prms'] = self.srv_prms
         AsychExe([DestroySO(entity, extras)]).start()
 
     def update(self, old, new, extras):
