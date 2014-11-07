@@ -44,6 +44,9 @@ class ServiceBackend(KindBackend, ActionBackend):
 
     def create(self, entity, extras):
         super(ServiceBackend, self).create(entity, extras)
+        # TODO look to see if EEU parameters are in the request
+        #      if there are parameters add them to the configinjector
+
         # create the python container
         InitSO(entity, extras).run()
         # run background tasks

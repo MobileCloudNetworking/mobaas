@@ -126,10 +126,10 @@ class Service():
 
             self.ep = keystone.endpoints.create(self.region, self.srv_ep.id, public_url, admin_url, internal_url)
             LOG.info('Service is now registered with keystone: ' +
-                      'Region: ' + self.ep.region +
-                      ' Public URL:' + self.ep.publicurl +
-                      ' Service ID: ' + self.srv_ep.id +
-                      ' Endpoint ID: ' + self.ep.id)
+                     'Region: ' + self.ep.region +
+                     ' Public URL:' + self.ep.publicurl +
+                     ' Service ID: ' + self.srv_ep.id +
+                     ' Endpoint ID: ' + self.ep.id)
         else:
             LOG.info('Service is already registered with keystone. Service endpoint is: ' + self.srv_ep)
 
