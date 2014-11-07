@@ -17,6 +17,7 @@
 __author__ = 'andy'
 
 from distutils import dir_util
+import json
 from mako.template import Template
 import os
 import random
@@ -31,6 +32,53 @@ from mcn.sm import LOG
 
 
 HTTP = 'http://'
+
+# TODO if error report verbosely and perform recovery
+
+
+class ServiceParameters():
+    def __init__(self, state=''):
+        self.state = state
+        self.service_params = {}
+        service_params_file_path = CONFIG.get('service_manager', 'service_params', '')
+        if len(service_params_file_path) > 0:
+            try:
+                self.service_params = json.loads(open(service_params_file_path).read())
+            except ValueError as e:
+                print "Invalid JSON sent as service config file"
+            except IOError as e:
+                LOG.error('Cannot find the specified parameters file: ' + service_params_file_path)
+                self.service_params = {}
+        else:
+            self.service_params = {}
+
+    def service_parameters(self, state='', content_type='text/occi'):
+        if content_type == 'text/occi':
+            params = {}
+            try:
+                params = self.service_params[self.state]
+            except KeyError as err:
+                LOG.error('The requested states parameters are not available: ' + self.state + ' <- not known')
+                return {}
+
+            header = ''
+            for param in params:
+                if param['type'] == 'string':
+                    value = '"'+param['value']+'"'
+                else:
+                    value = str(param['value'])
+
+                header = header + param['name'] + '=' + value + ', '
+            return header[0:-2]
+        else:
+            LOG.error('Content type not supported: ' + content_type)
+
+
+# if __name__ == '__main__':
+#     sp = ServiceParameters('initialise')
+#     p = sp.service_parameters()
+#     print p
+#     print len(p)
 
 
 class AsychExe(Thread):
@@ -56,9 +104,11 @@ class AsychExe(Thread):
 
 class Task():
 
-    def __init__(self, entity, extras):
+    def __init__(self, entity, extras, state):
         self.entity = entity
         self.extras = extras
+        self.state = state
+        self.service_params = ServiceParameters(self.state)
 
     def run(self):
         raise NotImplemented()
@@ -67,14 +117,14 @@ class Task():
 class InitSO(Task):
 
     def __init__(self, entity, extras):
-        Task.__init__(self, entity, extras)
+        Task.__init__(self, entity, extras, state='initialise')
         self.nburl = CONFIG.get('cloud_controller', 'nb_api', '')
         if self.nburl[-1] == '/':
             self.nburl = self.nburl[0:-1]
         LOG.info('CloudController Northbound API: ' + self.nburl)
 
     def run(self):
-        self.entity.attributes['mcn.service.state'] = 'initialising'
+        self.entity.attributes['mcn.service.state'] = 'initialise'
         LOG.debug('Ensuring SM SSH Key...')
         self.__ensure_ssh_key()
 
@@ -83,8 +133,6 @@ class InitSO(Task):
         if not self.entity.extras:
             self.entity.extras = {}
         self.entity.extras['repo_uri'] = self.__create_app()
-
-        self.entity.attributes['mcn.service.state'] = 'initialised'
 
         return self.entity, self.extras
 
@@ -187,9 +235,8 @@ class InitSO(Task):
 
 
 class ActivateSO(Task):
-    # TODO supply SM 'injected' params
     def __init__(self, entity, extras):
-        Task.__init__(self, entity, extras)
+        Task.__init__(self, entity, extras, state='activate')
         self.repo_uri = self.entity.extras['repo_uri']
         self.host = urlparse(self.repo_uri).netloc.split('@')[1]
         if os.system('which git') != 0:
@@ -198,14 +245,12 @@ class ActivateSO(Task):
     def run(self):
         # get the code of the bundle and push it to the git facilities
         # offered by OpenShift
-        self.entity.attributes['mcn.service.state'] = 'activating'
+        self.entity.attributes['mcn.service.state'] = 'activate'
         LOG.debug('Deploying SO Bundle to: ' + self.repo_uri)
         self.__deploy_app()
 
         LOG.debug('Activating the SO...')
         self.__init_so()
-
-        self.entity.attributes['mcn.service.state'] = 'activated'
 
         return self.entity, self.extras
 
@@ -277,6 +322,12 @@ class ActivateSO(Task):
             'X-Auth-Token': self.extras['token'],
             'X-Tenant-Name': self.extras['tenant_name'],
         }
+
+        occi_attrs = self.service_params.service_parameters()
+        if len(occi_attrs) > 0:
+            LOG.info('Adding service-specific parameters to call... X-OCCI-Attribute: ' + occi_attrs)
+            heads['X-OCCI-Attribute'] = occi_attrs
+
         LOG.debug('Initialising SO with: ' + url)
         LOG.info('Sending headers: ' + heads.__repr__())
 
@@ -289,9 +340,8 @@ class ActivateSO(Task):
 
 
 class DeploySO(Task):
-    # TODO supply SM 'injected' params
     def __init__(self, entity, extras):
-        Task.__init__(self, entity, extras)
+        Task.__init__(self, entity, extras, state='deploy')
         self.repo_uri = self.entity.extras['repo_uri']
         self.host = urlparse(self.repo_uri).netloc.split('@')[1]
 
@@ -304,7 +354,7 @@ class DeploySO(Task):
     def run(self):
         # Deployment is done without any control by the client...
         # otherwise we won't be able to hand back a working service!
-        self.entity.attributes['mcn.service.state'] = 'deploying'
+        self.entity.attributes['mcn.service.state'] = 'deploy'
         LOG.debug('Deploying the SO bundle...')
         url = HTTP + self.host + '/orchestrator/default'
         params = {'action': 'deploy'}
@@ -313,6 +363,10 @@ class DeploySO(Task):
             'Content-Type': 'text/occi',
             'X-Auth-Token': self.extras['token'],
             'X-Tenant-Name': self.extras['tenant_name']}
+        occi_attrs = self.service_params.service_parameters()
+        if len(occi_attrs) > 0:
+            LOG.info('Adding service-specific parameters to call... X-OCCI-Attribute:' + occi_attrs)
+            heads['X-OCCI-Attribute'] = occi_attrs
         LOG.debug('Deploying SO with: ' + url)
         LOG.info('Sending headers: ' + heads.__repr__())
 
@@ -323,20 +377,18 @@ class DeploySO(Task):
             LOG.error('HTTP Error: should do something more here!' + err.message)
             raise err
 
-        self.entity.attributes['mcn.service.state'] = 'deployed'
         LOG.debug('SO Deployed ')
         return self.entity, self.extras
 
 
 class ProvisionSO(Task):
-    # TODO supply SM 'injected' params
     def __init__(self, entity, extras):
-        Task.__init__(self, entity, extras)
+        Task.__init__(self, entity, extras, state='provision')
         self.repo_uri = self.entity.extras['repo_uri']
         self.host = urlparse(self.repo_uri).netloc.split('@')[1]
 
     def run(self):
-        self.entity.attributes['mcn.service.state'] = 'provisioning'
+        self.entity.attributes['mcn.service.state'] = 'provision'
         url = HTTP + self.host + '/orchestrator/default'
         params = {'action': 'provision'}
         heads = {
@@ -344,6 +396,10 @@ class ProvisionSO(Task):
             'Content-Type': 'text/occi',
             'X-Auth-Token': self.extras['token'],
             'X-Tenant-Name': self.extras['tenant_name']}
+        occi_attrs = self.service_params.service_parameters()
+        if len(occi_attrs) > 0:
+            LOG.info('Adding service-specific parameters to call... X-OCCI-Attribute:' + occi_attrs)
+            heads['X-OCCI-Attribute'] = occi_attrs
         LOG.debug('Provisioning SO with: ' + url)
         LOG.info('Sending headers: ' + heads.__repr__())
 
@@ -354,14 +410,13 @@ class ProvisionSO(Task):
             LOG.error('HTTP Error: should do something more here!' + err.message)
             raise err
 
-        self.entity.attributes['mcn.service.state'] = 'provisioned'
         return self.entity, self.extras
 
 
 class RetrieveSO(Task):
 
     def __init__(self, entity, extras):
-        Task.__init__(self, entity, extras)
+        Task.__init__(self, entity, extras, 'retrieve')
         repo_uri = self.entity.extras['repo_uri']
         self.host = urlparse(repo_uri).netloc.split('@')[1]
 
@@ -371,7 +426,7 @@ class RetrieveSO(Task):
         #   -H 'X-Auth-Token: '$KID \
         #   -H 'X-Tenant-Name: '$TENANT
 
-        if self.entity.attributes['mcn.service.state'] in ['activated', 'deployed', 'provisioned']:
+        if self.entity.attributes['mcn.service.state'] in ['activate', 'deploy', 'provision']:
             heads = {
                 'Content-Type': 'text/occi',
                 'Accept': 'text/occi',
@@ -403,7 +458,7 @@ class RetrieveSO(Task):
 
 class DestroySO(Task):
     def __init__(self, entity, extras):
-        Task.__init__(self, entity, extras)
+        Task.__init__(self, entity, extras, state='destroy')
         self.nburl = CONFIG.get('cloud_controller', 'nb_api', '')
         repo_uri = self.entity.extras['repo_uri']
         self.host = urlparse(repo_uri).netloc.split('@')[1]
@@ -418,12 +473,16 @@ class DestroySO(Task):
         url = HTTP + self.host + '/orchestrator/default'
         heads = {'X-Auth-Token': self.extras['token'],
                  'X-Tenant-Name': self.extras['tenant_name']}
+        occi_attrs = self.service_params.service_parameters()
+        if len(occi_attrs) > 0:
+            LOG.info('Adding service-specific parameters to call... X-OCCI-Attribute:' + occi_attrs)
+            heads['X-OCCI-Attribute'] = occi_attrs
         LOG.info('Disposing service orchestrator with: ' + url)
         LOG.info('Sending headers: ' + heads.__repr__())
 
         try:
             r = requests.delete(url, headers=heads)
-            r.raise_for_status()  # TODO if error report verbosely and perform recovery
+            r.raise_for_status()
         except requests.HTTPError as err:
             LOG.error('HTTP Error: should do something more here!' + err.message)
             raise err
@@ -458,7 +517,8 @@ def _do_cc_request(verb, url, heads):
                 r = requests.delete(url, headers=heads, auth=(user, pwd))
             elif verb == 'GET':
                 r = requests.get(url, headers=heads, auth=(user, pwd))
-            r.raise_for_status() # TODO if error report verbosely and perform recovery
+
+            r.raise_for_status()
             return r
         except requests.HTTPError as err:
             LOG.error('HTTP Error: should do something more here!' + err.message)
