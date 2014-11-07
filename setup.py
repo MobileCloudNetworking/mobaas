@@ -15,11 +15,11 @@
 from distutils.core import setup
 
 setup(name='mcn_sm',
-      version='0.1',
+      version='0.2',
       description='Library for creating MCN service managers',
       author='Andy Edmonds',
       author_email='edmo@zhaw.ch',
-      url='http://cloudcomp.ch',
+      url='http://blog.zhaw.ch/icclab',
       license='Apache 2.0',
       packages=['mcn', 'mcn.sm'],
       requires=['pyssf', 'requests', 'mako']
