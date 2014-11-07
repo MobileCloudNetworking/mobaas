@@ -33,31 +33,6 @@ class DefaultConfigParser(ConfigParser.ConfigParser):
         return value
 
 
-class ConditionalDecorator(object):
-    def __init__(self, dec, condition):
-        self.decorator = dec
-        self.condition = condition
-
-    def __call__(self, func):
-        if not self.condition:
-            return func
-        else:
-            return self.decorator(func)
-
-
-def timeit(method):
-    # helper function for to measure timedelta.
-    def timed(*args, **kw):
-        ts = time.time()
-        result = method(*args, **kw)
-        te = time.time()
-
-        LOG.info("Complete: %r (%r, %r) %2.2f sec" % (method.__name__, args, kw, te-ts))
-        return result, te-ts
-
-    return timed
-
-
 def config_logger(log_level=logging.DEBUG):
     logging.basicConfig(format='%(levelname)s %(asctime)s: \t%(message)s',
                         datefmt='%m/%d/%Y %I:%M:%S %p',
@@ -108,7 +83,6 @@ else:
     options = get_config_file()
     config_file_path = options.config_file_path
     CONFIG.read(config_file_path)
-    DOING_PERFORMANCE_ANALYSIS = options.perf_timings
 
 LOG = config_logger()
 LOG.info('Using configuration file: ' + config_file_path)
