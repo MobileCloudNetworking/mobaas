@@ -90,7 +90,6 @@ class InitSO(Task):
         return self.entity, self.extras
 
     def __create_app(self):
-
         # name must be A-Za-z0-9 and <=32 chars
         app_name = self.entity.kind.term[0:4] + 'srvinst' + ''.join(random.choice('0123456789ABCDEF') for i in range(16))
         heads = {
@@ -121,10 +120,13 @@ class InitSO(Task):
         self.entity.attributes['occi.core.id'] = app_uri_path.replace('/app/', '')
 
         # get git uri. this is where our bundle is pushed to
+        return self.__git_uri(app_uri_path)
+
+    def __git_uri(self, app_uri_path):
         url = self.nburl + app_uri_path
         headers = {'Accept': 'text/occi'}
         LOG.debug('Requesting container\'s git URL ' + url)
-        LOG.info('Sending headers: ' + heads.__repr__())
+        LOG.info('Sending headers: ' + headers.__repr__())
         r = _do_cc_request('GET', url, headers)
 
         attrs = r.headers.get('X-OCCI-Attribute', '')
@@ -154,8 +156,9 @@ class InitSO(Task):
             occi_key_name, occi_key_content = self.__extract_public_key()
 
             create_key_headers = {'Content-Type': 'text/occi',
-                'Category': 'public_key; scheme="http://schemas.ogf.org/occi/security/credentials#"',
-                'X-OCCI-Attribute':'occi.key.name="' + occi_key_name + '", occi.key.content="' + occi_key_content + '"'
+                                  'Category': 'public_key; scheme="http://schemas.ogf.org/occi/security/credentials#"',
+                                  'X-OCCI-Attribute':'occi.key.name="' + occi_key_name + '", occi.key.content="' +
+                                                     occi_key_content + '"'
             }
             _do_cc_request('POST', url, create_key_headers)
         else:
@@ -185,7 +188,7 @@ class InitSO(Task):
 
 
 class ActivateSO(Task):
-
+    # TODO supply SM 'injected' params
     def __init__(self, entity, extras):
         Task.__init__(self, entity, extras)
         self.repo_uri = self.entity.extras['repo_uri']
@@ -207,31 +210,6 @@ class ActivateSO(Task):
         self.entity.attributes['mcn.service.state'] = 'activated'
 
         return self.entity, self.extras
-
-    # example request to the SO
-    # curl -v -X PUT http://localhost:8051/orchestrator/default \
-    #   -H 'Content-Type: text/occi' \
-    #   -H 'Category: orchestrator; scheme="http://schemas.mobile-cloud-networking.eu/occi/service#"' \
-    #   -H 'X-Auth-Token: '$KID \
-    #   -H 'X-Tenant-Name: '$TENANT
-    def __init_so(self):
-        url = HTTP + self.host + '/orchestrator/default'
-        heads = {
-            'Category': 'orchestrator; scheme="http://schemas.mobile-cloud-networking.eu/occi/service#"',
-            'Content-Type': 'text/occi',
-            'X-Auth-Token': self.extras['token'],
-            'X-Tenant-Name': self.extras['tenant_name'],
-        }
-
-        LOG.debug('Initialising SO with: ' + url)
-        LOG.info('Sending headers: ' + heads.__repr__())
-        # TODO: send `entity`'s attributes along with the call to deploy
-        try:
-            r = requests.put(url, headers=heads)
-            r.raise_for_status()
-        except requests.HTTPError as err:
-            LOG.error('HTTP Error: should do something more here!' + err.message)
-            raise err
 
     def __deploy_app(self):
         """
@@ -287,9 +265,33 @@ class ActivateSO(Task):
 
         os.system(' '.join(['chmod', '+x', os.path.join(dir, '.openshift', 'action_hooks', '*')]))
 
+    # example request to the SO
+    # curl -v -X PUT http://localhost:8051/orchestrator/default \
+    #   -H 'Content-Type: text/occi' \
+    #   -H 'Category: orchestrator; scheme="http://schemas.mobile-cloud-networking.eu/occi/service#"' \
+    #   -H 'X-Auth-Token: '$KID \
+    #   -H 'X-Tenant-Name: '$TENANT
+    def __init_so(self):
+        url = HTTP + self.host + '/orchestrator/default'
+        heads = {
+            'Category': 'orchestrator; scheme="http://schemas.mobile-cloud-networking.eu/occi/service#"',
+            'Content-Type': 'text/occi',
+            'X-Auth-Token': self.extras['token'],
+            'X-Tenant-Name': self.extras['tenant_name'],
+        }
+        LOG.debug('Initialising SO with: ' + url)
+        LOG.info('Sending headers: ' + heads.__repr__())
+
+        try:
+            r = requests.put(url, headers=heads)
+            r.raise_for_status()
+        except requests.HTTPError as err:
+            LOG.error('HTTP Error: should do something more here!' + err.message)
+            raise err
+
 
 class DeploySO(Task):
-
+    # TODO supply SM 'injected' params
     def __init__(self, entity, extras):
         Task.__init__(self, entity, extras)
         self.repo_uri = self.entity.extras['repo_uri']
@@ -322,13 +324,14 @@ class DeploySO(Task):
         except requests.HTTPError as err:
             LOG.error('HTTP Error: should do something more here!' + err.message)
             raise err
+
         self.entity.attributes['mcn.service.state'] = 'deployed'
         LOG.debug('SO Deployed ')
         return self.entity, self.extras
 
 
 class ProvisionSO(Task):
-
+    # TODO supply SM 'injected' params
     def __init__(self, entity, extras):
         Task.__init__(self, entity, extras)
         self.repo_uri = self.entity.extras['repo_uri']
@@ -379,6 +382,7 @@ class RetrieveSO(Task):
                 'X-Tenant-Name': self.extras['tenant_name']}
             LOG.info('Getting state of service orchestrator with: ' + self.host + '/orchestrator/default')
             LOG.info('Sending headers: ' + heads.__repr__())
+
             try:
                 r = requests.get(HTTP + self.host + '/orchestrator/default', headers=heads)
                 r.raise_for_status()
@@ -418,9 +422,9 @@ class DestroySO(Task):
         url = HTTP + self.host + '/orchestrator/default'
         heads = {'X-Auth-Token': self.extras['token'],
                  'X-Tenant-Name': self.extras['tenant_name']}
-
         LOG.info('Disposing service orchestrator with: ' + url)
         LOG.info('Sending headers: ' + heads.__repr__())
+
         try:
             r = requests.delete(url, headers=heads)
             r.raise_for_status()  # TODO if error report verbosely and perform recovery
