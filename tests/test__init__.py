@@ -6,11 +6,11 @@ from occi.core_model import Kind
 from occi.core_model import Resource
 
 
-if 'SM_CONFIG_PATH' not in os.environ or 'SM_TIMEIT' not in os.environ:
-    raise AttributeError('Please provide SM_CONFIG_PATH, SM_TIMEIT as env vars.')
+if 'SM_CONFIG_PATH' not in os.environ:
+    raise AttributeError('Please provide SM_CONFIG_PATH as env var.')
 
 from mcn.sm import config_logger
-from mcn.sm import get_config_file
+from mcn.sm import get_params
 
 
 class TestInitFunctions(unittest.TestCase):
@@ -20,7 +20,7 @@ class TestInitFunctions(unittest.TestCase):
 
     @patch('mcn.sm.OptionParser')
     def config_logger_for_sanity(self, mock_opt):
-        get_config_file()
+        get_params()
         mock_opt.assert_called_once_with()
 
     @patch('mcn.sm.logging')

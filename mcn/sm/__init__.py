@@ -54,18 +54,13 @@ def config_logger(log_level=logging.DEBUG):
     return logger
 
 
-def get_config_file():
+def get_params():
     parser = OptionParser(usage="Usage: %prog options. See %prog -h for options.")
     parser.add_option("-c", "--config-file",
                       action="store",
                       type="string",
                       dest="config_file_path",
                       help="Path to the service manager configuration file.")
-    parser.add_option("-p", "--perf-timings",
-                      action="store_true",
-                      dest="perf_timings",
-                      default=False,
-                      help="Enable performance timings within the SM.")
     (options, args) = parser.parse_args()
 
     if not options.config_file_path:
@@ -75,12 +70,11 @@ def get_config_file():
 
 CONFIG = DefaultConfigParser()
 
-if 'SM_CONFIG_PATH' in os.environ and 'SM_TIMEIT' in os.environ:
+if 'SM_CONFIG_PATH' in os.environ:
     config_file_path = os.getenv('SM_CONFIG_PATH')
-    DOING_PERFORMANCE_ANALYSIS = os.getenv('SM_TIMEIT')
     CONFIG.read(config_file_path)
 else:
-    options = get_config_file()
+    options = get_params()
     config_file_path = options.config_file_path
     CONFIG.read(config_file_path)
 
