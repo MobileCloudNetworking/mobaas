@@ -477,6 +477,17 @@ class RetrieveSO(Task):
         return self.entity, self.extras
 
 
+class UpdateSO(Task):
+    def __init__(self, entity, extras):
+        Task.__init__(self, entity, extras, state='destroy')
+        self.nburl = CONFIG.get('cloud_controller', 'nb_api', '')
+        repo_uri = self.entity.extras['repo_uri']
+        self.host = urlparse(repo_uri).netloc.split('@')[1]
+
+    def run(self):
+        # take parameters from EEU and send them down to the SO instance
+        pass
+
 class DestroySO(Task):
     def __init__(self, entity, extras):
         Task.__init__(self, entity, extras, state='destroy')

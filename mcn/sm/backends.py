@@ -24,6 +24,7 @@ from mcn.sm.so_manager import ActivateSO
 from mcn.sm.so_manager import DeploySO
 from mcn.sm.so_manager import ProvisionSO
 from mcn.sm.so_manager import RetrieveSO
+from mcn.sm.so_manager import UpdateSO
 from mcn.sm.so_manager import DestroySO
 
 #service state model:
@@ -63,8 +64,10 @@ class ServiceBackend(KindBackend, ActionBackend):
         AsychExe([DestroySO(entity, extras)]).start()
 
     def update(self, old, new, extras):
-        # TODO implement and pass down params to target SO
-        raise NotImplementedError()
+        super(ServiceBackend, self).update(old, new, extras)
+        extras['srv_prms'] = self.srv_prms
+        #TODO must fix constructor signature
+        UpdateSO(new, extras).run()
 
     def replace(self, old, new, extras):
         raise NotImplementedError()
