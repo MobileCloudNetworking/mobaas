@@ -63,6 +63,7 @@ class ServiceBackend(KindBackend, ActionBackend):
         AsychExe([DestroySO(entity, extras)]).start()
 
     def update(self, old, new, extras):
+        # TODO implement and pass down params to target SO
         raise NotImplementedError()
 
     def replace(self, old, new, extras):
