@@ -478,15 +478,51 @@ class RetrieveSO(Task):
 
 
 class UpdateSO(Task):
-    def __init__(self, entity, extras):
-        Task.__init__(self, entity, extras, state='destroy')
-        self.nburl = CONFIG.get('cloud_controller', 'nb_api', '')
-        repo_uri = self.entity.extras['repo_uri']
-        self.host = urlparse(repo_uri).netloc.split('@')[1]
+    def __init__(self, entity, extras, updated_entity):
+        Task.__init__(self, entity, extras, state='update')
+        self.repo_uri = self.entity.extras['repo_uri']
+        self.host = urlparse(self.repo_uri).netloc.split('@')[1]
+        self.new = updated_entity
 
     def run(self):
         # take parameters from EEU and send them down to the SO instance
-        pass
+        # Trigger update on SO + service instance:
+        #
+        # $ curl -v -X POST http://localhost:8051/orchestrator/default \
+        #       -H 'Content-Type: text/occi' \
+        #       -H 'X-Auth-Token: '$KID \
+        #       -H 'X-Tenant-Name: '$TENANT \
+        #       -H 'X-OCCI-Attribute: occi.epc.attr_1="foo"'
+        url = HTTP + self.host + '/orchestrator/default'
+        heads = {
+            'Content-Type': 'text/occi',
+            'X-Auth-Token': self.extras['token'],
+            'X-Tenant-Name': self.extras['tenant_name']}
+
+        occi_attrs = self.extras['srv_prms'].service_parameters(self.state)
+
+        if len(occi_attrs) > 0:
+            LOG.info('Adding service-specific parameters to call... X-OCCI-Attribute:' + occi_attrs)
+            heads['X-OCCI-Attribute'] = occi_attrs
+
+        if len(self.new.attributes) > 0:
+            LOG.info('Adding updated parameters... X-OCCI-Attribute: ' + self.new.attributes.__repr__())
+            for kv in self.new.attributes:
+                occi_attrs = occi_attrs + ', ' + kv[0] + '=' + kv[1]
+            heads['X-OCCI-Attribute'] = occi_attrs
+
+        LOG.debug('Provisioning SO with: ' + url)
+        LOG.info('Sending headers: ' + heads.__repr__())
+
+        try:
+            r = requests.post(url, headers=heads)
+            r.raise_for_status()
+        except requests.HTTPError as err:
+            LOG.error('HTTP Error: should do something more here!' + err.message)
+            raise err
+
+        self.entity.attributes['mcn.service.state'] = 'update'
+        return self.entity, self.extras
 
 class DestroySO(Task):
     def __init__(self, entity, extras):

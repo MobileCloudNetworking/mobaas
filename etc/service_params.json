@@ -34,11 +34,19 @@
 		{
 			"name": "init_value",
 			"value": "immutable_init_value",
-			"type": "string"},
+			"type": "string"
+        },
 		{
 			"name": "init_value",
 			"value": "immutable_init_value",
 			"type": "string"
 		}
-	]
+	],
+    "update":[
+        {
+			"name": "init_value",
+			"value": "immutable_init_value",
+			"type": "string"
+        }
+    ]
 }

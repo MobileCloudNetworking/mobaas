@@ -27,12 +27,14 @@ from mcn.sm.so_manager import RetrieveSO
 from mcn.sm.so_manager import UpdateSO
 from mcn.sm.so_manager import DestroySO
 
+
 #service state model:
 # - initialise
 # - activate
 # - deploy
 # - provision
 # - active (entered into runtime ops)
+# - update
 # - destroying
 # - failed
 
@@ -43,6 +45,7 @@ class ServiceBackend(KindBackend, ActionBackend):
     """
     def __init__(self, app):
         self.registry = app.registry
+        # these are read from a location specified in sm,cfg, service_manager::service_params
         self.srv_prms = ServiceParameters()
 
     def create(self, entity, extras):
@@ -66,8 +69,7 @@ class ServiceBackend(KindBackend, ActionBackend):
     def update(self, old, new, extras):
         super(ServiceBackend, self).update(old, new, extras)
         extras['srv_prms'] = self.srv_prms
-        #TODO must fix constructor signature
-        UpdateSO(new, extras).run()
+        UpdateSO(old, extras, new).run()
 
     def replace(self, old, new, extras):
         raise NotImplementedError()
