@@ -37,6 +37,7 @@ HTTP = 'http://'
 
 
 class ServiceParameters():
+    #TODO move this class into Service.py
     def __init__(self):
         self.service_params = {}
         service_params_file_path = CONFIG.get('service_manager', 'service_params', '')
@@ -523,6 +524,7 @@ class UpdateSO(Task):
 
         self.entity.attributes['mcn.service.state'] = 'update'
         return self.entity, self.extras
+
 
 class DestroySO(Task):
     def __init__(self, entity, extras):

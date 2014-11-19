@@ -28,15 +28,15 @@ from mcn.sm.so_manager import UpdateSO
 from mcn.sm.so_manager import DestroySO
 
 
-#service state model:
-# - initialise
-# - activate
-# - deploy
-# - provision
-# - active (entered into runtime ops)
-# - update
-# - destroying
-# - failed
+# service state model:
+#  - initialise
+#  - activate
+#  - deploy
+#  - provision
+#  - active (entered into runtime ops)
+#  - update
+#  - destroy
+#  - fail
 
 
 class ServiceBackend(KindBackend, ActionBackend):
