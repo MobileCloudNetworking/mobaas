@@ -32,8 +32,8 @@ from mcn.sm.so_manager import DestroySO
 #  - initialise
 #  - activate
 #  - deploy
-#  - provision
-#  - active (entered into runtime ops)
+#  - provision -> This is THE terminal state
+#  - "active" (entered into runtime ops) This is not used
 #  - update
 #  - destroy
 #  - fail

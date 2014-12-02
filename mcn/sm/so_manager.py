@@ -43,16 +43,19 @@ class ServiceParameters():
         service_params_file_path = CONFIG.get('service_manager', 'service_params', '')
         if len(service_params_file_path) > 0:
             try:
-                self.service_params = json.loads(open(service_params_file_path).read())
+                with open(service_params_file_path) as svc_params_content:
+                    self.service_params = json.load(svc_params_content)
+                    svc_params_content.close()
             except ValueError as e:
-                print "Invalid JSON sent as service config file"
+                LOG.error("Invalid JSON sent as service config file")
             except IOError as e:
                 LOG.error('Cannot find the specified parameters file: ' + service_params_file_path)
-                self.service_params = {}
         else:
-            self.service_params = {}
+            LOG.warn("No service parameters file found in config file, setting params to empty.")
 
     def service_parameters(self, state='', content_type='text/occi'):
+        # takes the internal parameteres defined for the lifecycle phase...
+        #       and combines them with the client supplied parameters
         if content_type == 'text/occi':
             params = []
             try:
@@ -76,15 +79,15 @@ class ServiceParameters():
             LOG.error('Content type not supported: ' + content_type)
 
     def add_client_params(self, params={}):
-
+        # adds user supplied parameters from the instantiation request of a service
         client_params = []
 
-        for k,v in params.items():
-            type = 'number'
+        for k, v in params.items():
+            param_type = 'number'
             if (v.startswith('"') or v.startswith('\'')) and (v.endswith('"') or v.endswith('\'')):
-                type = 'string'
+                param_type = 'string'
                 v = v[1:-1]
-            param = {'name': k, 'value': v, 'type': type}
+            param = {'name': k, 'value': v, 'type': param_type}
 
             client_params.append(param)
 
@@ -96,7 +99,6 @@ if __name__ == '__main__':
     sp.add_client_params({'test': '1', 'test.test':'"astring"'})
     p = sp.service_parameters('initialise')
     print p
-    print len(p)
 
 
 class AsychExe(Thread):
@@ -120,6 +122,7 @@ class AsychExe(Thread):
                 self.registry.add_resource(key=entity.identifier, resource=entity, extras=extras)
 
 
+# XXX push common functionality here
 class Task():
 
     def __init__(self, entity, extras, state):
@@ -143,6 +146,8 @@ class InitSO(Task):
             LOG.info('Client supplied parameters: ' + entity.attributes.__repr__())
             #TODO check that these parameters are valid according to the kind specification
             self.extras['srv_prms'].add_client_params(entity.attributes)
+        else:
+            LOG.warn('No client supplied parameters.')
 
     def run(self):
         self.entity.attributes['mcn.service.state'] = 'initialise'

@@ -1,50 +1,50 @@
 {
 	"initialise":[
+        {
+			"name": "initialise.integer",
+            "type": "number",
+			"value": 1
+        }
 	],
     "activate":[
 		{
-			"name": "integer",
+			"name": "activate.integer",
             "type": "number",
 			"value": 1
         },
 		{
-			"name": "string",
+			"name": "activate.string",
 			"type": "string",
             "value": "immutable_init_value"
 		},
         {
-			"name": "float",
+			"name": "activate.float",
             "type": "number",
 			"value": 0.11
 		}
 	],
 	"deploy":[
 		{
-			"name": "init_value",
+			"name": "deploy.init_value",
 			"value": "immutable_init_value",
 			"type": "string"
-        },
-		{
-			"name": "init_value",
-			"value": "immutable_init_value",
-			"type": "string"
-		}
+        }
 	],
 	"provision":[
 		{
-			"name": "init_value",
+			"name": "provision.init_value",
 			"value": "immutable_init_value",
 			"type": "string"
         },
 		{
-			"name": "init_value",
-			"value": "immutable_init_value",
-			"type": "string"
+			"name": "provision.value",
+			"value": 12,
+			"type": "number"
 		}
 	],
     "update":[
         {
-			"name": "init_value",
+			"name": "update.init_value",
 			"value": "immutable_init_value",
 			"type": "string"
         }
