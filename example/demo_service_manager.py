@@ -32,6 +32,7 @@ if __name__ == '__main__':
                               'mcn.endpoint.hss':       'immutable',
                               'mcn.endpoint.srv-gw':    'immutable',
                               'mcn.endpoint.pdn-gw':    'immutable',
+                              'mcn.endpoint.maas':      '',
                               },
                   related=[Resource.kind],
                   actions=[])
