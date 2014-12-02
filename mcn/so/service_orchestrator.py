@@ -1,5 +1,6 @@
 import logging
 
+
 def config_logger(log_level=logging.DEBUG):
     logging.basicConfig(format='%(threadName)s \t %(levelname)s %(asctime)s: \t%(message)s',
                         datefmt='%m/%d/%Y %I:%M:%S %p',
@@ -9,6 +10,7 @@ def config_logger(log_level=logging.DEBUG):
     return logger
 
 LOG = config_logger()
+
 
 class SOExecution(object):
     """
