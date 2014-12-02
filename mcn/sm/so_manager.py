@@ -37,21 +37,25 @@ HTTP = 'http://'
 
 
 class ServiceParameters():
+    #TODO move this class into Service.py
     def __init__(self):
         self.service_params = {}
         service_params_file_path = CONFIG.get('service_manager', 'service_params', '')
         if len(service_params_file_path) > 0:
             try:
-                self.service_params = json.loads(open(service_params_file_path).read())
+                with open(service_params_file_path) as svc_params_content:
+                    self.service_params = json.load(svc_params_content)
+                    svc_params_content.close()
             except ValueError as e:
-                print "Invalid JSON sent as service config file"
+                LOG.error("Invalid JSON sent as service config file")
             except IOError as e:
                 LOG.error('Cannot find the specified parameters file: ' + service_params_file_path)
-                self.service_params = {}
         else:
-            self.service_params = {}
+            LOG.warn("No service parameters file found in config file, setting params to empty.")
 
     def service_parameters(self, state='', content_type='text/occi'):
+        # takes the internal parameteres defined for the lifecycle phase...
+        #       and combines them with the client supplied parameters
         if content_type == 'text/occi':
             params = []
             try:
@@ -75,15 +79,15 @@ class ServiceParameters():
             LOG.error('Content type not supported: ' + content_type)
 
     def add_client_params(self, params={}):
-
+        # adds user supplied parameters from the instantiation request of a service
         client_params = []
 
-        for k,v in params.items():
-            type = 'number'
+        for k, v in params.items():
+            param_type = 'number'
             if (v.startswith('"') or v.startswith('\'')) and (v.endswith('"') or v.endswith('\'')):
-                type = 'string'
+                param_type = 'string'
                 v = v[1:-1]
-            param = {'name': k, 'value': v, 'type': type}
+            param = {'name': k, 'value': v, 'type': param_type}
 
             client_params.append(param)
 
@@ -95,7 +99,6 @@ if __name__ == '__main__':
     sp.add_client_params({'test': '1', 'test.test':'"astring"'})
     p = sp.service_parameters('initialise')
     print p
-    print len(p)
 
 
 class AsychExe(Thread):
@@ -119,6 +122,7 @@ class AsychExe(Thread):
                 self.registry.add_resource(key=entity.identifier, resource=entity, extras=extras)
 
 
+# XXX push common functionality here
 class Task():
 
     def __init__(self, entity, extras, state):
@@ -142,6 +146,8 @@ class InitSO(Task):
             LOG.info('Client supplied parameters: ' + entity.attributes.__repr__())
             #TODO check that these parameters are valid according to the kind specification
             self.extras['srv_prms'].add_client_params(entity.attributes)
+        else:
+            LOG.warn('No client supplied parameters.')
 
     def run(self):
         self.entity.attributes['mcn.service.state'] = 'initialise'
@@ -474,6 +480,54 @@ class RetrieveSO(Task):
         else:
             LOG.debug('Cannot GET entity as it is not in the activated, deployed or provisioned state')
 
+        return self.entity, self.extras
+
+
+class UpdateSO(Task):
+    def __init__(self, entity, extras, updated_entity):
+        Task.__init__(self, entity, extras, state='update')
+        self.repo_uri = self.entity.extras['repo_uri']
+        self.host = urlparse(self.repo_uri).netloc.split('@')[1]
+        self.new = updated_entity
+
+    def run(self):
+        # take parameters from EEU and send them down to the SO instance
+        # Trigger update on SO + service instance:
+        #
+        # $ curl -v -X POST http://localhost:8051/orchestrator/default \
+        #       -H 'Content-Type: text/occi' \
+        #       -H 'X-Auth-Token: '$KID \
+        #       -H 'X-Tenant-Name: '$TENANT \
+        #       -H 'X-OCCI-Attribute: occi.epc.attr_1="foo"'
+        url = HTTP + self.host + '/orchestrator/default'
+        heads = {
+            'Content-Type': 'text/occi',
+            'X-Auth-Token': self.extras['token'],
+            'X-Tenant-Name': self.extras['tenant_name']}
+
+        occi_attrs = self.extras['srv_prms'].service_parameters(self.state)
+
+        if len(occi_attrs) > 0:
+            LOG.info('Adding service-specific parameters to call... X-OCCI-Attribute:' + occi_attrs)
+            heads['X-OCCI-Attribute'] = occi_attrs
+
+        if len(self.new.attributes) > 0:
+            LOG.info('Adding updated parameters... X-OCCI-Attribute: ' + self.new.attributes.__repr__())
+            for kv in self.new.attributes:
+                occi_attrs = occi_attrs + ', ' + kv[0] + '=' + kv[1]
+            heads['X-OCCI-Attribute'] = occi_attrs
+
+        LOG.debug('Provisioning SO with: ' + url)
+        LOG.info('Sending headers: ' + heads.__repr__())
+
+        try:
+            r = requests.post(url, headers=heads)
+            r.raise_for_status()
+        except requests.HTTPError as err:
+            LOG.error('HTTP Error: should do something more here!' + err.message)
+            raise err
+
+        self.entity.attributes['mcn.service.state'] = 'update'
         return self.entity, self.extras
 
 

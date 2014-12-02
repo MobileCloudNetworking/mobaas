@@ -147,7 +147,6 @@ class Service():
             keystone = client.Client(token=self.token, tenant_name=self.tenant_name, auth_url=self.design_uri)
             keystone.services.delete(self.srv_ep.id)  # deletes endpoint too
 
-    # TODO should use a better WSGI implementation
     def run(self):
         self.app.register_backend(self.srv_type, self.service_backend)
 
