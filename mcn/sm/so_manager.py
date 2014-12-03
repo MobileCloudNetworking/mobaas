@@ -51,20 +51,22 @@ class ServiceParameters():
             except IOError as e:
                 LOG.error('Cannot find the specified parameters file: ' + service_params_file_path)
         else:
-            LOG.warn("No service parameters file found in config file, setting params to empty.")
+            LOG.warn("No service parameters file found in config file, setting internal params to empty.")
 
     def service_parameters(self, state='', content_type='text/occi'):
-        # takes the internal parameteres defined for the lifecycle phase...
+        # takes the internal parameters defined for the lifecycle phase...
         #       and combines them with the client supplied parameters
         if content_type == 'text/occi':
             params = []
+            # get the state specific internal parameters
             try:
                 params = self.service_params[state]
-                for p in self.service_params['client_params']:
-                    params.append(p)
             except KeyError as err:
-                LOG.error('The requested states parameters are not available: ' + state + ' <- not known')
-                return []
+                LOG.warn('The requested states parameters are not available: "' + state + '"')
+
+            # get the client supplied parameters if any
+            for p in self.service_params['client_params']:
+                params.append(p)
 
             header = ''
             for param in params:
@@ -74,6 +76,7 @@ class ServiceParameters():
                     value = str(param['value'])
 
                 header = header + param['name'] + '=' + value + ', '
+
             return header[0:-2]
         else:
             LOG.error('Content type not supported: ' + content_type)
@@ -96,7 +99,12 @@ class ServiceParameters():
 
 if __name__ == '__main__':
     sp = ServiceParameters()
-    sp.add_client_params({'test': '1', 'test.test':'"astring"'})
+    cp = {
+        'test': '1',
+        'test.test': '"astring"'
+    }
+    sp.add_client_params(cp)
+
     p = sp.service_parameters('initialise')
     print p
 
