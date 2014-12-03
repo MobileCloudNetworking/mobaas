@@ -18,6 +18,10 @@ The SM library is under mcn/sm
 
 The example service manager (`example/demo_service_manager.py`) uses and extends this library.
 
+## Upfront Notice
+
+This is important. The SM will **only** deploy the SO's code that is on its `master` branch.
+
 ## Quickly Getting Started
 
 1. Clone [this project](https://git.mobile-cloud-networking.eu/cloudcontroller/mcn_sm)
