@@ -65,8 +65,11 @@ class ServiceParameters():
                 LOG.warn('The requested states parameters are not available: "' + state + '"')
 
             # get the client supplied parameters if any
-            for p in self.service_params['client_params']:
-                params.append(p)
+            try:
+                for p in self.service_params['client_params']:
+                    params.append(p)
+            except KeyError as err:
+                LOG.info('No client params')
 
             header = ''
             for param in params:
