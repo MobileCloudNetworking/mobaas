@@ -21,6 +21,6 @@ setup(name='mcn_sm',
       author_email='edmo@zhaw.ch',
       url='http://blog.zhaw.ch/icclab',
       license='Apache 2.0',
-      packages=['mcn', 'mcn.sm'],
+      packages=['mcn', 'mcn.sm', 'mcn.so'],
       requires=['pyssf', 'requests', 'mako']
      )
