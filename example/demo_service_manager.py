@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
     # defines the service to offer - the service owner defines this
     epc_svc_type = Type('http://schemas.mobile-cloud-networking.eu/occi/sm#',
-                  'epc',
+                  'test-epc',
                   title='This is an example EPC service type',
                   attributes={'mcn.endpoint.enodeb':    'immutable',
                               'mcn.endpoint.mme':       'immutable',

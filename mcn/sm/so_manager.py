@@ -435,7 +435,7 @@ class ProvisionSO(Task):
             'X-Tenant-Name': self.extras['tenant_name']}
         occi_attrs = self.extras['srv_prms'].service_parameters(self.state)
         if len(occi_attrs) > 0:
-            LOG.info('Adding service-specific parameters to call... X-OCCI-Attribute:' + occi_attrs)
+            LOG.info('Adding service-specific parameters to call... X-OCCI-Attribute: ' + occi_attrs)
             heads['X-OCCI-Attribute'] = occi_attrs
         LOG.debug('Provisioning SO with: ' + url)
         LOG.info('Sending headers: ' + heads.__repr__())
@@ -524,8 +524,9 @@ class UpdateSO(Task):
 
         if len(self.new.attributes) > 0:
             LOG.info('Adding updated parameters... X-OCCI-Attribute: ' + self.new.attributes.__repr__())
-            for kv in self.new.attributes:
-                occi_attrs = occi_attrs + ', ' + kv[0] + '=' + kv[1]
+            for k, v in self.new.attributes.items():
+                occi_attrs = occi_attrs + ', ' + k + '=' + v
+                self.entity.attributes[k] = v
             heads['X-OCCI-Attribute'] = occi_attrs
 
         LOG.debug('Provisioning SO with: ' + url)
