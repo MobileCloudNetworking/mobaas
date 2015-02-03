@@ -457,6 +457,7 @@ class RetrieveSO(Task):
         Task.__init__(self, entity, extras, 'retrieve')
         repo_uri = self.entity.extras['repo_uri']
         self.host = urlparse(repo_uri).netloc.split('@')[1]
+        self.registry = self.extras['registry']
 
     def run(self):
         # example request to the SO
@@ -488,6 +489,36 @@ class RetrieveSO(Task):
                         kv[1] = kv[1][1:-1]  # scrub off quotes
                     self.entity.attributes[kv[0]] = kv[1]
                     LOG.debug('OCCI Attribute: ' + kv[0] + ' --> ' + kv[1])
+
+            # Assemble the SIG
+            svcinsts = ''
+            try:
+                svcinsts = self.entity.attributes['mcn.so.svcinsts']
+                del self.entity.attributes['mcn.so.svcinsts']  # remove this, not be be used anywhere else
+            except KeyError:
+                LOG.warn('There was no service instance endpoints - ignore if not a composition.')
+                pass
+
+            if self.registry is None:
+                LOG.error('No registry!')
+
+            if len(svcinsts) > 0:
+                import uuid
+                from occi.core_model import Resource, Link
+                svcinsts = svcinsts.split()  # all instance EPs
+                for svc_loc in svcinsts:
+                    # TODO get the service instance resource representation
+                    # source resource is self.entity
+                    compos = svc_loc.split('/')
+                    key = '/' + compos[3] + '/' + compos[4]
+                    target = Resource(key, Resource.kind, [])  # target resource
+                    target.attributes['mcn.sm.endpoint'] = svc_loc
+                    self.registry.add_resource(key, target, None)
+
+                    key = '/link/'+str(uuid.uuid4())
+                    link = Link(key, Link.kind, [], self.entity, target)
+                    self.registry.add_resource(key, link, None)
+                    self.entity.links.append(link)
         else:
             LOG.debug('Cannot GET entity as it is not in the activated, deployed or provisioned state')
 

@@ -12,13 +12,13 @@ def config_logger(log_level=logging.DEBUG):
 LOG = config_logger()
 
 
-class SOExecution(object):
+class Execution(object):
     """
     Interface to the CC methods. No decision is taken here on the service
     """
 
-    def __init__(self, token, tenant_name):
-        super(SOExecution, self).__init__()
+    def __init__(self, token, tenant):
+        super(Execution, self).__init__()
         raise NotImplementedError()
 
     def design(self):
@@ -40,10 +40,10 @@ class SOExecution(object):
         raise NotImplementedError()
 
 
-class SODecision(object):
+class Decision(object):
 
     def __init__(self):
-        super(SODecision, self).__init__()
+        super(Decision, self).__init__()
         raise NotImplementedError()
 
     def run(self):
