@@ -26,12 +26,15 @@ import shutil
 import tempfile
 from threading import Thread
 from urlparse import urlparse
+from retrying import retry
 
 from mcn.sm import CONFIG
 from mcn.sm import LOG
 
 
 HTTP = 'http://'
+WAIT = CONFIG.get('cloud_controller', 'wait_time', 2000)
+ATTEMPTS = CONFIG.get('cloud_controller', 'max_attempts', 5)
 
 # TODO if error report verbosely and perform recovery
 
@@ -643,3 +646,69 @@ def _do_cc_request(verb, url, heads):
             raise err
     else:
         LOG.error('Supplied verb is unknown: ' + verb)
+
+def __retry_if_http_error(exception):
+    """
+    Defines which type of exceptions allow for a retry of the request
+
+    :param exception: the raised exception
+    :return: True if retrying the request is possible
+    """
+    error = False
+    if isinstance(exception, requests.HTTPError):
+        if exception.response.status_code == 500:
+            error = True
+    elif isinstance(exception, requests.ConnectionError):
+        error = True
+    return error
+
+@retry(retry_on_exception=__retry_if_http_error, wait_fixed=WAIT, stop_max_attempt_number=ATTEMPTS)
+def __http_retriable_request(authenticate, verb, url, headers={}, **kwargs):
+    """
+    Sends an HTTP request, with automatic retrying in case of HTTP Errors 500 or ConnectionErrors
+
+    :param verb: [POST|PUT|GET|DELETE] HTTP keyword
+    :param url: The URL to use.
+    :param headers: Headers of the request
+    :param kwargs: May contain authenticate=True parameter, which is used to make requests requiring authentication, e.g. CC requests
+    :return: result of the request
+    """
+    # LOG.debug(verb + ' on ' + url)
+
+    auth = ()
+    if 'authenticate' in kwargs:
+        authenticate = authenticate
+        if authenticate:
+            user = CONFIG.get('cloud_controller', 'user')
+            pwd = CONFIG.get('cloud_controller', 'pwd')
+            auth = (user, pwd)
+    else:
+        authenticate = False
+
+    if verb in ['POST', 'DELETE', 'GET', 'PUT']:
+        try:
+            if verb == 'POST':
+                if authenticate:
+                    r = requests.post(url, headers=headers, auth=auth)
+                else:
+                    r = requests.post(url, headers=headers)
+            elif verb == 'DELETE':
+                if authenticate:
+                    r = requests.delete(url, headers=headers, auth=auth)
+                else:
+                    r = requests.delete(url, headers=headers)
+            elif verb == 'GET':
+                if authenticate:
+                    r = requests.get(url, headers=headers, auth=auth)
+                else:
+                    r = requests.get(url, headers=headers)
+            elif verb == 'PUT':
+                if authenticate:
+                    r = requests.put(url, headers=headers, auth=auth)
+                else:
+                    r = requests.put(url, headers=headers)
+            r.raise_for_status()
+            return r
+        except requests.HTTPError as err:
+            print 'HTTP Error: should do something more here!' + err.message
+            raise err
