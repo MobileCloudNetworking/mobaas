@@ -39,7 +39,12 @@ class SMRegistry(NonePersistentRegistry):
         self.resources[resource.identifier] = resource
 
     def get_resource(self, key, extras):
+        # XXX: Omitting extras is potential dangerous and breaks multitenancy
         return self.resources[key]
+
+    def get_resources(self, extras):
+        # XXX: Omitting extras is potential dangerous and breaks multitenancy
+        return self.resources.values()
 
 
 class MCNApplication(Application):
