@@ -635,7 +635,7 @@ def _retry_if_http_error(exception):
 def _http_retriable_request(verb, url, headers={}, **kwargs):
     """
     Sends an HTTP request, with automatic retrying in case of HTTP Errors 500 or ConnectionErrors
-    _http_retriable_request('POST', 'http://cc.cloudcomplab.ch:8888/app/', {'Content-Type': 'text/occi', [...]}, authenticate=True)
+    _http_retriable_request('POST', 'http://cc.cloudcomplab.ch:8888/app/', headers={'Content-Type': 'text/occi', [...]}, authenticate=True)
     :param verb: [POST|PUT|GET|DELETE] HTTP keyword
     :param url: The URL to use.
     :param headers: Headers of the request
