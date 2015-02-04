@@ -632,7 +632,7 @@ def _retry_if_http_error(exception):
     return error
 
 @retry(retry_on_exception=_retry_if_http_error, wait_fixed=WAIT, stop_max_attempt_number=ATTEMPTS)
-def _http_retriable_request(verb, url, headers={}, **kwargs):
+def _http_retriable_request(verb, url, headers={}, authenticate=False):
     """
     Sends an HTTP request, with automatic retrying in case of HTTP Errors 500 or ConnectionErrors
     _http_retriable_request('POST', 'http://cc.cloudcomplab.ch:8888/app/', headers={'Content-Type': 'text/occi', [...]}, authenticate=True)
@@ -645,14 +645,10 @@ def _http_retriable_request(verb, url, headers={}, **kwargs):
     # LOG.debug(verb + ' on ' + url)
 
     auth = ()
-    if 'authenticate' in kwargs:
-        authenticate = kwargs['authenticate']
-        if authenticate:
-            user = CONFIG.get('cloud_controller', 'user')
-            pwd = CONFIG.get('cloud_controller', 'pwd')
-            auth = (user, pwd)
-    else:
-        authenticate = False
+    if authenticate:
+        user = CONFIG.get('cloud_controller', 'user')
+        pwd = CONFIG.get('cloud_controller', 'pwd')
+        auth = (user, pwd)
 
     if verb in ['POST', 'DELETE', 'GET', 'PUT']:
         try:
@@ -679,5 +675,5 @@ def _http_retriable_request(verb, url, headers={}, **kwargs):
             r.raise_for_status()
             return r
         except requests.HTTPError as err:
-            print 'HTTP Error: should do something more here!' + err.message
+            LOG.error('HTTP Error: should do something more here!' + err.message)
             raise err
