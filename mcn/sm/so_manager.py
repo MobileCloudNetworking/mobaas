@@ -596,7 +596,7 @@ def _retry_if_http_error(exception):
     error = False
     if isinstance(exception, requests.HTTPError):
         if exception.response.status_code == 500:
-            LOG.info('Requesting retry: response code: ' + exception.response.status_code)
+            LOG.info('Requesting retry: response code: ' + str(exception.response.status_code))
             LOG.error('Exception: ' + exception.__repr__())
             error = True
     elif isinstance(exception, requests.ConnectionError):
