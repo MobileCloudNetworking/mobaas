@@ -453,7 +453,7 @@ class RetrieveSO(Task):
         #   -H 'X-Auth-Token: '$KID \
         #   -H 'X-Tenant-Name: '$TENANT
 
-        if self.entity.attributes['mcn.service.state'] in ['activate', 'deploy', 'provision']:
+        if self.entity.attributes['mcn.service.state'] in ['activate', 'deploy', 'provision', 'update']:
             heads = {
                 'Content-Type': 'text/occi',
                 'Accept': 'text/occi',
@@ -500,7 +500,7 @@ class RetrieveSO(Task):
                     self.registry.add_resource(key, link, None)
                     self.entity.links.append(link)
         else:
-            LOG.debug('Cannot GET entity as it is not in the activated, deployed or provisioned state')
+            LOG.debug('Cannot GET entity as it is not in the activated, deployed or provisioned, updated state')
 
         return self.entity, self.extras
 
