@@ -30,86 +30,10 @@ import uuid
 from occi.core_model import Resource, Link
 from mcn.sm.config import CONFIG
 from mcn.sm.log import LOG
+from mcn.sm.retry_http import http_retriable_request
 
 
 HTTP = 'http://'
-
-
-class ServiceParameters():
-    #TODO move this class into Service.py
-    def __init__(self):
-        self.service_params = {}
-        service_params_file_path = CONFIG.get('service_manager', 'service_params', '')
-        if len(service_params_file_path) > 0:
-            try:
-                with open(service_params_file_path) as svc_params_content:
-                    self.service_params = json.load(svc_params_content)
-                    svc_params_content.close()
-            except ValueError as e:
-                LOG.error("Invalid JSON sent as service config file")
-            except IOError as e:
-                LOG.error('Cannot find the specified parameters file: ' + service_params_file_path)
-        else:
-            LOG.warn("No service parameters file found in config file, setting internal params to empty.")
-
-    def service_parameters(self, state='', content_type='text/occi'):
-        # takes the internal parameters defined for the lifecycle phase...
-        #       and combines them with the client supplied parameters
-        if content_type == 'text/occi':
-            params = []
-            # get the state specific internal parameters
-            try:
-                params = self.service_params[state]
-            except KeyError as err:
-                LOG.warn('The requested states parameters are not available: "' + state + '"')
-
-            # get the client supplied parameters if any
-            try:
-                for p in self.service_params['client_params']:
-                    params.append(p)
-            except KeyError as err:
-                LOG.info('No client params')
-
-            header = ''
-            for param in params:
-                if param['type'] == 'string':
-                    value = '"' + param['value'] + '"'
-                else:
-                    value = str(param['value'])
-
-                header = header + param['name'] + '=' + value + ', '
-
-            return header[0:-2]
-        else:
-            LOG.error('Content type not supported: ' + content_type)
-
-    def add_client_params(self, params={}):
-        # adds user supplied parameters from the instantiation request of a service
-        client_params = []
-
-        for k, v in params.items():
-            param_type = 'number'
-            if (v.startswith('"') or v.startswith('\'')) and (v.endswith('"') or v.endswith('\'')):
-                param_type = 'string'
-                v = v[1:-1]
-            param = {'name': k, 'value': v, 'type': param_type}
-
-            client_params.append(param)
-
-        self.service_params['client_params'] = client_params
-
-
-if __name__ == '__main__':
-    sp = ServiceParameters()
-    cp = {
-        'test': '1',
-        'test.test': '"astring"'
-    }
-    sp.add_client_params(cp)
-
-    p = sp.service_parameters('initialise')
-    print p
-
 
 class AsychExe(Thread):
     """
@@ -186,7 +110,7 @@ class InitSO(Task):
         url = self.nburl + '/app/'
         LOG.debug('Requesting container to execute SO Bundle: ' + url)
         LOG.info('Sending headers: ' + heads.__repr__())
-        r = _http_retriable_request('POST', url, headers=heads, authenticate=True)
+        r = http_retriable_request('POST', url, headers=heads, authenticate=True)
 
         loc = r.headers.get('Location', '')
         if loc == '':
@@ -210,7 +134,7 @@ class InitSO(Task):
         headers = {'Accept': 'text/occi'}
         LOG.debug('Requesting container\'s git URL ' + url)
         LOG.info('Sending headers: ' + headers.__repr__())
-        r = _http_retriable_request('GET', url, headers=headers, authenticate=True)
+        r = http_retriable_request('GET', url, headers=headers, authenticate=True)
 
         attrs = r.headers.get('X-OCCI-Attribute', '')
         if attrs == '':
@@ -231,7 +155,7 @@ class InitSO(Task):
     def __ensure_ssh_key(self):
         url = self.nburl + '/public_key/'
         heads = {'Accept': 'text/occi'}
-        resp = _http_retriable_request('GET', url, headers=heads, authenticate=True)
+        resp = http_retriable_request('GET', url, headers=heads, authenticate=True)
         locs = resp.headers.get('x-occi-location', '')
         #Split on spaces, test if there is at least one key registered
         if len(locs.split()) < 1:
@@ -243,7 +167,7 @@ class InitSO(Task):
                                   'X-OCCI-Attribute':'occi.key.name="' + occi_key_name + '", occi.key.content="' +
                                                      occi_key_content + '"'
             }
-            _http_retriable_request('POST', url, headers=create_key_headers, authenticate=True)
+            http_retriable_request('POST', url, headers=create_key_headers, authenticate=True)
         else:
             LOG.debug('Valid SM SSH is registered with OpenShift.')
 
@@ -367,7 +291,7 @@ class ActivateSO(Task):
 
         LOG.debug('Initialising SO with: ' + url)
         LOG.info('Sending headers: ' + heads.__repr__())
-        _http_retriable_request('PUT', url, headers=heads)
+        http_retriable_request('PUT', url, headers=heads)
 
 
 class DeploySO(Task):
@@ -399,7 +323,7 @@ class DeploySO(Task):
             heads['X-OCCI-Attribute'] = occi_attrs
         LOG.debug('Deploying SO with: ' + url)
         LOG.info('Sending headers: ' + heads.__repr__())
-        _http_retriable_request('POST', url, headers=heads, params=params)
+        http_retriable_request('POST', url, headers=heads, params=params)
 
         self.entity.attributes['mcn.service.state'] = 'deploy'
         LOG.debug('SO Deployed ')
@@ -426,7 +350,7 @@ class ProvisionSO(Task):
             heads['X-OCCI-Attribute'] = occi_attrs
         LOG.debug('Provisioning SO with: ' + url)
         LOG.info('Sending headers: ' + heads.__repr__())
-        _http_retriable_request('POST', url, headers=heads, params=params)
+        http_retriable_request('POST', url, headers=heads, params=params)
 
         self.entity.attributes['mcn.service.state'] = 'provision'
         return self.entity, self.extras
@@ -454,7 +378,7 @@ class RetrieveSO(Task):
                 'X-Tenant-Name': self.extras['tenant_name']}
             LOG.info('Getting state of service orchestrator with: ' + self.host + '/orchestrator/default')
             LOG.info('Sending headers: ' + heads.__repr__())
-            r = _http_retriable_request('GET', HTTP + self.host + '/orchestrator/default', headers=heads)
+            r = http_retriable_request('GET', HTTP + self.host + '/orchestrator/default', headers=heads)
 
             attrs = r.headers['x-occi-attribute'].split(', ')
             for attr in attrs:
@@ -536,7 +460,7 @@ class UpdateSO(Task):
         LOG.debug('Provisioning SO with: ' + url)
         LOG.info('Sending headers: ' + heads.__repr__())
 
-        _http_retriable_request('POST', url, headers=heads)
+        http_retriable_request('POST', url, headers=heads)
 
         self.entity.attributes['mcn.service.state'] = 'update'
         return self.entity, self.extras
@@ -566,7 +490,7 @@ class DestroySO(Task):
         LOG.info('Disposing service orchestrator with: ' + url)
         LOG.info('Sending headers: ' + heads.__repr__())
 
-        _http_retriable_request('DELETE', url, headers=heads)
+        http_retriable_request('DELETE', url, headers=heads)
 
         url = self.nburl + self.entity.identifier.replace('/' + self.entity.kind.term + '/', '/app/')
         heads = {'Content-Type': 'text/occi',
@@ -574,6 +498,6 @@ class DestroySO(Task):
                  'X-Tenant-Name': self.extras['tenant_name']}
         LOG.info('Disposing service orchestrator container via CC... ' + url)
         LOG.info('Sending headers: ' + heads.__repr__())
-        _http_retriable_request('DELETE', url, headers=heads, authenticate=True)
+        http_retriable_request('DELETE', url, headers=heads, authenticate=True)
 
         return self.entity, self.extras

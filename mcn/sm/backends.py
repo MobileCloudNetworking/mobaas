@@ -17,7 +17,7 @@ __author__ = 'andy'
 
 from occi.backend import ActionBackend, KindBackend
 
-from mcn.sm.so_manager import ServiceParameters
+from mcn.sm.service import ServiceParameters
 from mcn.sm.so_manager import AsychExe
 from mcn.sm.so_manager import InitSO
 from mcn.sm.so_manager import ActivateSO

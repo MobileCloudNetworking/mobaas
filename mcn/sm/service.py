@@ -262,3 +262,79 @@ class Service():
             attributes=self.stg['service_attributes'],
             location='/' + svc_term + '/'
         )
+
+
+class ServiceParameters():
+    #TODO move this class into Service.py
+    def __init__(self):
+        self.service_params = {}
+        service_params_file_path = CONFIG.get('service_manager', 'service_params', '')
+        if len(service_params_file_path) > 0:
+            try:
+                with open(service_params_file_path) as svc_params_content:
+                    self.service_params = json.load(svc_params_content)
+                    svc_params_content.close()
+            except ValueError as e:
+                LOG.error("Invalid JSON sent as service config file")
+            except IOError as e:
+                LOG.error('Cannot find the specified parameters file: ' + service_params_file_path)
+        else:
+            LOG.warn("No service parameters file found in config file, setting internal params to empty.")
+
+    def service_parameters(self, state='', content_type='text/occi'):
+        # takes the internal parameters defined for the lifecycle phase...
+        #       and combines them with the client supplied parameters
+        if content_type == 'text/occi':
+            params = []
+            # get the state specific internal parameters
+            try:
+                params = self.service_params[state]
+            except KeyError as err:
+                LOG.warn('The requested states parameters are not available: "' + state + '"')
+
+            # get the client supplied parameters if any
+            try:
+                for p in self.service_params['client_params']:
+                    params.append(p)
+            except KeyError as err:
+                LOG.info('No client params')
+
+            header = ''
+            for param in params:
+                if param['type'] == 'string':
+                    value = '"' + param['value'] + '"'
+                else:
+                    value = str(param['value'])
+
+                header = header + param['name'] + '=' + value + ', '
+
+            return header[0:-2]
+        else:
+            LOG.error('Content type not supported: ' + content_type)
+
+    def add_client_params(self, params={}):
+        # adds user supplied parameters from the instantiation request of a service
+        client_params = []
+
+        for k, v in params.items():
+            param_type = 'number'
+            if (v.startswith('"') or v.startswith('\'')) and (v.endswith('"') or v.endswith('\'')):
+                param_type = 'string'
+                v = v[1:-1]
+            param = {'name': k, 'value': v, 'type': param_type}
+
+            client_params.append(param)
+
+        self.service_params['client_params'] = client_params
+
+
+if __name__ == '__main__':
+    sp = ServiceParameters()
+    cp = {
+        'test': '1',
+        'test.test': '"astring"'
+    }
+    sp.add_client_params(cp)
+
+    p = sp.service_parameters('initialise')
+    print p
