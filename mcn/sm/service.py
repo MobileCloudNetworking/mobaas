@@ -1,4 +1,4 @@
-# Copyright 2014 Zuercher Hochschule fuer Angewandte Wissenschaften
+# Copyright 2014-2015 Zuercher Hochschule fuer Angewandte Wissenschaften
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,19 +15,27 @@
 
 __author__ = 'andy'
 
-from wsgiref.simple_server import make_server
+import json
+import requests
 import sys
 import signal
+from urlparse import urlparse
 
 from keystoneclient.v2_0 import client
+from occi.backend import KindBackend
+from occi.core_model import Link, Kind, Resource
 from occi.exceptions import HTTPError
 from occi.registry import NonePersistentRegistry
 from occi.wsgi import Application
+from tornado import httpserver
+from tornado import ioloop
+from tornado import wsgi
 
 from mcn.sm.backends import ServiceBackend
-from mcn.sm import CONFIG
-from mcn.sm import LOG
+from mcn.sm.config import CONFIG
+from mcn.sm.log import LOG
 from sdk.mcn import util
+from sdk.mcn.security import KeyStoneAuthService as token_checker
 
 
 class SMRegistry(NonePersistentRegistry):
@@ -39,11 +47,11 @@ class SMRegistry(NonePersistentRegistry):
         self.resources[resource.identifier] = resource
 
     def get_resource(self, key, extras):
-        # XXX: Omitting extras is potential dangerous and breaks multitenancy
+        # TODO: FIXME Omitting extras is potential dangerous and breaks tenant isolation
         return self.resources[key]
 
     def get_resources(self, extras):
-        # XXX: Omitting extras is potential dangerous and breaks multitenancy
+        # TODO: FIXME Omitting extras is potential dangerous and breaks tenant isolation
         return self.resources.values()
 
 
@@ -51,8 +59,6 @@ class MCNApplication(Application):
 
     def __init__(self):
         super(MCNApplication, self).__init__(registry=SMRegistry())
-        from occi.core_model import Link
-        from occi.backend import KindBackend
         self.register_backend(Link.kind, KindBackend())
 
     def register_backend(self, category, backend):
@@ -64,13 +70,16 @@ class MCNApplication(Application):
 
         if auth == '':
             LOG.error('No X-Auth-Token header supplied.')
-            raise HTTPError(401, 'No X-Auth-Token header supplied.')
+            raise HTTPError(400, 'No X-Auth-Token header supplied.')
 
         tenant = environ.get('HTTP_X_TENANT_NAME', '')
 
         if tenant == '':
             LOG.error('No X-Tenant-Name header supplied.')
             raise HTTPError(400, 'No X-Tenant-Name header supplied.')
+
+        if not token_checker.verify(token=auth, tenant_name=tenant):
+            raise HTTPError(401, 'Token is not valid. You likely need an updated token.')
 
         return self._call_occi(environ, response, token=auth, tenant_name=tenant, registry=self.registry)
 
@@ -80,19 +89,30 @@ class Service():
     def __init__(self, app, srv_type):
         self.app = app
         self.service_backend = ServiceBackend(app)
-        self.srv_type = srv_type
+        LOG.info('Using configuration file: ' + 'TODO')  # TODO get this!
         self.reg_srv = CONFIG.getboolean('service_manager_admin', 'register_service')
-        if self.reg_srv:
-            self.srv_ep = None
-            self.ep = None
-            self.token, self.tenant_name = self.get_service_credentials()
-            self.design_uri = CONFIG.get('service_manager', 'design_uri', '')
-            if self.design_uri == '':
+        srv_type = self.create_service_type()
+        self.srv_type = srv_type
+        # NEW TODO token and tenant is now required in the config file
+        self.token, self.tenant_name = self.get_service_credentials()
+        self.design_uri = CONFIG.get('service_manager', 'design_uri', '')
+        if self.design_uri == '':
                 LOG.fatal('No design_uri parameter supplied in sm.cfg')
                 raise Exception('No design_uri parameter supplied in sm.cfg')
+
+        #NEW TODO STG MUST be supplied with a SM
+        self.stg = None
+        stg_path = CONFIG.get('service_manager', 'stg', '')
+        with open(stg_path) as stg_content:
+            self.stg = json.load(stg_content)
+            stg_content.close()
+
+        self.srv_ep = None
+        self.ep = None
+        if self.reg_srv:
             self.region = CONFIG.get('service_manager_admin', 'region', '')
             if self.region == '':
-                LOG.info('No region parameter specified in sm.cfg, defaulting to RegionOne')
+                LOG.info('No region parameter specified in sm.cfg, defaulting to an OpenStack default: RegionOne')
                 self.region = 'RegionOne'
             self.service_endpoint = CONFIG.get('service_manager_admin', 'service_endpoint')
             if self.service_endpoint == '':
@@ -113,7 +133,6 @@ class Service():
     def register_extension(self, mixin, backend):
         self.app.register_backend(mixin, backend)
 
-    # TODO this functionality should be moved over to the SDK or put in the CC API
     def register_service(self):
 
         self.srv_ep = util.services.get_service_endpoint(identifier=self.srv_type.term, token=self.token,
@@ -147,7 +166,6 @@ class Service():
             self.deregister_service()
         sys.exit(0)
 
-    # TODO this functionality should be moved over to the SDK or put in the CC API
     def deregister_service(self):
 
         if self.srv_ep:
@@ -161,10 +179,86 @@ class Service():
         if self.reg_srv:
             self.register_service()
 
-        # setup shutdown handler for deregistration of service
+        # setup shutdown handler for de-registration of service
         for sig in [signal.SIGTERM, signal.SIGINT, signal.SIGHUP, signal.SIGQUIT]:
             signal.signal(sig, self.shutdown_handler)
 
         LOG.info('Service Manager running on interfaces, running on port: ' + CONFIG.get('general', 'port'))
-        httpd = make_server('', int(CONFIG.get('general', 'port')), self.app)
-        httpd.serve_forever()
+
+        if self.DEBUG:
+            from wsgiref.simple_server import make_server
+            httpd = make_server('', int(CONFIG.get('general', 'port')), self.app)
+            httpd.serve_forever()
+        else:
+            container = wsgi.WSGIContainer(self.app)
+            http_server = httpserver.HTTPServer(container)
+            http_server.listen(int(CONFIG.get('general', 'port')))
+            ioloop.IOLoop.instance().start()
+
+    def get_category(self, svc_kind):
+
+        keystone = client.Client(token=self.token, tenant_name=self.tenant_name, auth_url=self.design_uri)
+
+        try:
+            svc = keystone.services.find(type=svc_kind.keys()[0])
+            svc_ep = keystone.endpoints.find(service_id=svc.id)
+        except Exception as e:
+            LOG.error('Cannot find the service endpoint of: ' + svc_kind.__repr__())
+            raise e
+
+        u = urlparse(svc_ep.publicurl)
+
+        # sort out the OCCI QI path
+        if u.path == '/':
+            svc_ep.publicurl += '-/'
+        elif u.path == '':
+            svc_ep.publicurl += '/-/'
+        else:
+            LOG.warn('Service endpoint URL does not look like it will work: ' + svc_ep.publicurl.__repr__())
+            svc_ep.publicurl = u.scheme + '://' + u.netloc + '/-/'
+            LOG.warn('Trying with the scheme and net location: ' + svc_ep.publicurl.__repr__())
+
+        heads = {'X-Auth-Token': self.token, 'X-Tenant-Name': self.tenant_name, 'Accept': 'application/occi+json'}
+
+        try:
+            r = requests.get(svc_ep.publicurl, headers=heads)
+            r.raise_for_status()
+        except requests.HTTPError as err:
+            print('HTTP Error: should do something more here!' + err.message)
+            raise err
+
+        registry = json.loads(r.content)
+
+        category = None
+        for cat in registry:
+            if 'related' in cat:
+                category = cat
+
+        return Kind(scheme=category['scheme'], term=category['term'], related=category['related'], title=category['title'],
+                    attributes=category['attributes'], location=category['location'])
+
+    def get_dependencies(self):
+        dependent_kinds = []
+        for svc_type in self.stg['depends_on']:
+            c = self.get_category(svc_type)
+            if c:
+                dependent_kinds.append(c)
+
+        dependent_kinds.append(Resource.kind)
+        return dependent_kinds
+
+    def create_service_type(self):
+
+        required_occi_kinds = self.get_dependencies()
+
+        svc_scheme = self.stg['service_type'].split('#')[0] + '#'
+        svc_term = self.stg['service_type'].split('#')[1]
+
+        return Kind(
+            scheme=svc_scheme,
+            term=svc_term,
+            related=required_occi_kinds,
+            title=self.stg['service_description'],
+            attributes=self.stg['service_attributes'],
+            location='/' + svc_term + '/'
+        )

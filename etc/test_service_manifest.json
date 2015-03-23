@@ -1,0 +1,37 @@
+{
+    "service_type": "http://schemas.mobile-cloud-networking.eu/occi/sm#test-e2e",
+    "service_description": "End-to-end service",
+    "service_attributes": {
+        "mcn.endpoint.pgw_u-sgw_u": "immutable",
+        "mcn.endpoint.nat": "immutable",
+        "mcn.endpoint.rcb.mgt": "immutable",
+        "mcn.endpoint.enodeb": "immutable",
+        "mcn.endpoint.dns": "immutable",
+        "mcn.endpoint.p-i-s-cscf": "immutable",
+        "mcn.endpoint.maas": "immutable",
+        "mcn.endpoint.mme-pgw_c-sgw_c": "immutable"
+    },
+    "service_endpoint": "http://127.0.0.1:8888/test-e2e/",
+    "depends_on": [
+      { "http://schemas.mobile-cloud-networking.eu/occi/sm#maas": { "inputs": [] } },
+      { "http://schemas.mobile-cloud-networking.eu/occi/sm#cdn": { "inputs": [] } },
+      { "http://schemas.mobile-cloud-networking.eu/occi/sm#rcb": { "inputs": [] } },
+      { "http://schemas.mobile-cloud-networking.eu/occi/sm#dnsaas": {
+          "inputs": [
+            "http://schemas.mobile-cloud-networking.eu/occi/sm#maas#mcn.endpoint.maas"
+          ] }
+      },
+      { "http://schemas.mobile-cloud-networking.eu/occi/sm#ran": {
+          "inputs": [
+            "http://schemas.mobile-cloud-networking.eu/occi/sm#maas#mcn.endpoint.maas"
+          ] }
+      }
+    ],
+    "resources": [
+        {
+            "http://schemas.mobile-cloud-networking.eu/occi/service#cc": {
+                "uri": "file:///root/my/bundle/data/itg.yaml"
+            }
+        }
+    ]
+}
