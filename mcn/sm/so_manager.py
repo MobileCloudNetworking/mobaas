@@ -36,8 +36,8 @@ from mcn.sm import LOG
 
 
 HTTP = 'http://'
-WAIT = CONFIG.get('cloud_controller', 'wait_time', 2000)
-ATTEMPTS = CONFIG.get('cloud_controller', 'max_attempts', 5)
+WAIT = int(CONFIG.get('cloud_controller', 'wait_time', 2000))
+ATTEMPTS = int(CONFIG.get('cloud_controller', 'max_attempts', 5))
 
 # TODO if error report verbosely and perform recovery
 
