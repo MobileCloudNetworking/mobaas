@@ -39,6 +39,9 @@ class Execution(object):
     def state(self):
         raise NotImplementedError()
 
+    def notify(self, entity, attributes, extras):
+        pass
+
 
 class Decision(object):
 

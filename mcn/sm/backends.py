@@ -39,7 +39,7 @@ from mcn.sm.so_manager import DestroySO
 #  - fail
 
 
-class ServiceBackend(KindBackend, ActionBackend):
+class ServiceBackend(KindBackend):
     """
     Provides the basic functionality required to CRUD SOs
     """
@@ -72,8 +72,4 @@ class ServiceBackend(KindBackend, ActionBackend):
         UpdateSO(old, extras, new).run()
 
     def replace(self, old, new, extras):
-        raise NotImplementedError()
-
-    # currently not exposed on the kind
-    def action(self, entity, action, attributes, extras):
         raise NotImplementedError()
