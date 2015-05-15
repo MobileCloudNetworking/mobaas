@@ -12,14 +12,14 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-from mcn.sm.service import Service
+from sm.service import Service
 
 __author__ = 'andy'
 
 from occi.core_model import Kind as Type
 from occi.core_model import Resource
 
-from mcn.sm.service import MCNApplication
+from sm.service import MApplication
 
 if __name__ == '__main__':
 
@@ -38,7 +38,7 @@ if __name__ == '__main__':
                   actions=[])
 
     # Create a service
-    srv = Service(MCNApplication(), epc_svc_type)
+    srv = Service(MApplication(), epc_svc_type)
 
     # Run the service manager
     srv.run()

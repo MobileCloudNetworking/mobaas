@@ -31,9 +31,9 @@ from tornado import httpserver
 from tornado import ioloop
 from tornado import wsgi
 
-from mcn.sm.backends import ServiceBackend
-from mcn.sm.config import CONFIG
-from mcn.sm.log import LOG
+from sm.backends import ServiceBackend
+from sm.config import CONFIG, CONFIG_PATH
+from sm.log import LOG
 from sdk.mcn import util
 from sdk.mcn.security import KeyStoneAuthService as token_checker
 
@@ -55,14 +55,14 @@ class SMRegistry(NonePersistentRegistry):
         return self.resources.values()
 
 
-class MCNApplication(Application):
+class MApplication(Application):
 
     def __init__(self):
-        super(MCNApplication, self).__init__(registry=SMRegistry())
+        super(MApplication, self).__init__(registry=SMRegistry())
         self.register_backend(Link.kind, KindBackend())
 
     def register_backend(self, category, backend):
-        return super(MCNApplication, self).register_backend(category, backend)
+        return super(MApplication, self).register_backend(category, backend)
 
     def __call__(self, environ, response):
         auth = environ.get('HTTP_X_AUTH_TOKEN', '')
@@ -78,6 +78,7 @@ class MCNApplication(Application):
             LOG.error('No X-Tenant-Name header supplied.')
             raise HTTPError(400, 'No X-Tenant-Name header supplied.')
 
+        # TODO fix: create instance!!!
         if not token_checker.verify(token=auth, tenant_name=tenant):
             raise HTTPError(401, 'Token is not valid. You likely need an updated token.')
 
@@ -86,13 +87,16 @@ class MCNApplication(Application):
 
 class Service():
 
-    def __init__(self, app, srv_type):
+    def __init__(self, app, srv_type=None):
+        # openstack objects tracking the keystone service and endpoint
+        self.srv_ep = None
+        self.ep = None
+        self.DEBUG = True
+
         self.app = app
         self.service_backend = ServiceBackend(app)
-        LOG.info('Using configuration file: ' + 'TODO')  # TODO get this!
-        self.reg_srv = CONFIG.getboolean('service_manager_admin', 'register_service')
-        srv_type = self.create_service_type()
-        self.srv_type = srv_type
+        LOG.info('Using configuration file: ' + CONFIG_PATH)
+
         # NEW TODO token and tenant is now required in the config file
         self.token, self.tenant_name = self.get_service_credentials()
         self.design_uri = CONFIG.get('service_manager', 'design_uri', '')
@@ -100,27 +104,35 @@ class Service():
                 LOG.fatal('No design_uri parameter supplied in sm.cfg')
                 raise Exception('No design_uri parameter supplied in sm.cfg')
 
-        #NEW TODO STG MUST be supplied with a SM
+        # NEW TODO STG MUST be supplied with a SM
         self.stg = None
-        stg_path = CONFIG.get('service_manager', 'stg', '')
+        stg_path = CONFIG.get('service_manager', 'manifest', '')
+        if stg_path == '':
+            raise RuntimeError('No STG specified in the configuration file.')
         with open(stg_path) as stg_content:
             self.stg = json.load(stg_content)
             stg_content.close()
 
-        self.srv_ep = None
-        self.ep = None
+        if not srv_type:
+            srv_type = self.create_service_type()
+        self.srv_type = srv_type
+
+        self.reg_srv = CONFIG.getboolean('service_manager_admin', 'register_service')
         if self.reg_srv:
             self.region = CONFIG.get('service_manager_admin', 'region', '')
             if self.region == '':
                 LOG.info('No region parameter specified in sm.cfg, defaulting to an OpenStack default: RegionOne')
                 self.region = 'RegionOne'
             self.service_endpoint = CONFIG.get('service_manager_admin', 'service_endpoint')
-            if self.service_endpoint == '':
-                LOG.fatal('No service_endpoint parameter supplied in sm.cfg')
-                raise Exception()
+            if self.service_endpoint != '':
+                LOG.warn('DEPRECATED: service_endpoint parameter supplied in sm.cfg! Endpoint is now specified in '
+                         'service manifest as service_endpoint')
+            LOG.info('Using ' + self.stg['service_endpoint'] + ' as the service_endpoint value '
+                                                               'from service manifest')
+            up = urlparse(self.stg['service_endpoint'])
+            self.service_endpoint = up.scheme + '://' + up.hostname + ':' + str(up.port)
 
     def get_service_credentials(self):
-
         token = CONFIG.get('service_manager_admin', 'service_token', '')
         if token == '':
             raise Exception('No service_token parameter supplied in sm.cfg')
@@ -183,17 +195,23 @@ class Service():
         for sig in [signal.SIGTERM, signal.SIGINT, signal.SIGHUP, signal.SIGQUIT]:
             signal.signal(sig, self.shutdown_handler)
 
-        LOG.info('Service Manager running on interfaces, running on port: ' + CONFIG.get('general', 'port'))
+        up = urlparse(self.stg['service_endpoint'])
+        dep_port = CONFIG.get('general', 'port')
+        if dep_port != '':
+            LOG.warn('DEPRECATED: parameter general: port in service manager config. '
+                     'Service port number (' + str(up.port) + ') is taken from the service manifest')
 
         if self.DEBUG:
             from wsgiref.simple_server import make_server
-            httpd = make_server('', int(CONFIG.get('general', 'port')), self.app)
+            httpd = make_server('', int(up.port), self.app)
             httpd.serve_forever()
         else:
             container = wsgi.WSGIContainer(self.app)
             http_server = httpserver.HTTPServer(container)
-            http_server.listen(int(CONFIG.get('general', 'port')))
+            http_server.listen(int(up.port))
             ioloop.IOLoop.instance().start()
+
+        LOG.info('Service Manager running on interfaces, running on port: ' + int(up.port))
 
     def get_category(self, svc_kind):
 
@@ -224,7 +242,7 @@ class Service():
             r = requests.get(svc_ep.publicurl, headers=heads)
             r.raise_for_status()
         except requests.HTTPError as err:
-            print('HTTP Error: should do something more here!' + err.message)
+            LOG.error('HTTP Error: should do something more here!' + err.message)
             raise err
 
         registry = json.loads(r.content)
@@ -234,8 +252,8 @@ class Service():
             if 'related' in cat:
                 category = cat
 
-        return Kind(scheme=category['scheme'], term=category['term'], related=category['related'], title=category['title'],
-                    attributes=category['attributes'], location=category['location'])
+        return Kind(scheme=category['scheme'], term=category['term'], related=category['related'],
+                    title=category['title'], attributes=category['attributes'], location=category['location'])
 
     def get_dependencies(self):
         dependent_kinds = []
@@ -262,79 +280,3 @@ class Service():
             attributes=self.stg['service_attributes'],
             location='/' + svc_term + '/'
         )
-
-
-class ServiceParameters():
-    #TODO move this class into Service.py
-    def __init__(self):
-        self.service_params = {}
-        service_params_file_path = CONFIG.get('service_manager', 'service_params', '')
-        if len(service_params_file_path) > 0:
-            try:
-                with open(service_params_file_path) as svc_params_content:
-                    self.service_params = json.load(svc_params_content)
-                    svc_params_content.close()
-            except ValueError as e:
-                LOG.error("Invalid JSON sent as service config file")
-            except IOError as e:
-                LOG.error('Cannot find the specified parameters file: ' + service_params_file_path)
-        else:
-            LOG.warn("No service parameters file found in config file, setting internal params to empty.")
-
-    def service_parameters(self, state='', content_type='text/occi'):
-        # takes the internal parameters defined for the lifecycle phase...
-        #       and combines them with the client supplied parameters
-        if content_type == 'text/occi':
-            params = []
-            # get the state specific internal parameters
-            try:
-                params = self.service_params[state]
-            except KeyError as err:
-                LOG.warn('The requested states parameters are not available: "' + state + '"')
-
-            # get the client supplied parameters if any
-            try:
-                for p in self.service_params['client_params']:
-                    params.append(p)
-            except KeyError as err:
-                LOG.info('No client params')
-
-            header = ''
-            for param in params:
-                if param['type'] == 'string':
-                    value = '"' + param['value'] + '"'
-                else:
-                    value = str(param['value'])
-
-                header = header + param['name'] + '=' + value + ', '
-
-            return header[0:-2]
-        else:
-            LOG.error('Content type not supported: ' + content_type)
-
-    def add_client_params(self, params={}):
-        # adds user supplied parameters from the instantiation request of a service
-        client_params = []
-
-        for k, v in params.items():
-            param_type = 'number'
-            if (v.startswith('"') or v.startswith('\'')) and (v.endswith('"') or v.endswith('\'')):
-                param_type = 'string'
-                v = v[1:-1]
-            param = {'name': k, 'value': v, 'type': param_type}
-
-            client_params.append(param)
-
-        self.service_params['client_params'] = client_params
-
-
-if __name__ == '__main__':
-    sp = ServiceParameters()
-    cp = {
-        'test': '1',
-        'test.test': '"astring"'
-    }
-    sp.add_client_params(cp)
-
-    p = sp.service_parameters('initialise')
-    print p

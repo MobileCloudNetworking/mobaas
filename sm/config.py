@@ -19,6 +19,7 @@ import ConfigParser
 import os
 from optparse import OptionParser
 
+
 class DefaultConfigParser(ConfigParser.ConfigParser):
 
     def get(self, section, option, default='', raw=False, vars=None):
@@ -28,7 +29,9 @@ class DefaultConfigParser(ConfigParser.ConfigParser):
             value = default
         return value
 
-def get_params():
+
+def read():
+    config = DefaultConfigParser()
     parser = OptionParser(usage="Usage: %prog options. See %prog -h for options.")
     parser.add_option("-c", "--config-file",
                       action="store",
@@ -37,17 +40,18 @@ def get_params():
                       help="Path to the service manager configuration file.")
     (options, args) = parser.parse_args()
 
-    if not options.config_file_path:
-        parser.error("Wrong number of arguments.")
+    config_file_path = ''
+    # TODO add better default heuristics
+    if 'SM_CONFIG_PATH' in os.environ:
+        config_file_path = os.getenv('SM_CONFIG_PATH')
+    elif options.config_file_path:
+        config_file_path = options.config_file_path
+    else:
+        parser.error("SM: Wrong number of command line arguments.")
 
-    return options
+    config.read(config_file_path)
 
-CONFIG = DefaultConfigParser()
+    return config, config_file_path
 
-if 'SM_CONFIG_PATH' in os.environ:
-    config_file_path = os.getenv('SM_CONFIG_PATH')
-    CONFIG.read(config_file_path)
-else:
-    options = get_params()
-    config_file_path = options.config_file_path
-    CONFIG.read(config_file_path)
+
+CONFIG, CONFIG_PATH = read()

@@ -15,17 +15,17 @@
 
 __author__ = 'andy'
 
-from occi.backend import ActionBackend, KindBackend
+from occi.backend import KindBackend
 
-from mcn.sm.service import ServiceParameters
-from mcn.sm.so_manager import AsychExe
-from mcn.sm.so_manager import InitSO
-from mcn.sm.so_manager import ActivateSO
-from mcn.sm.so_manager import DeploySO
-from mcn.sm.so_manager import ProvisionSO
-from mcn.sm.so_manager import RetrieveSO
-from mcn.sm.so_manager import UpdateSO
-from mcn.sm.so_manager import DestroySO
+from sm.so_manager import ServiceParameters
+from sm.so_manager import AsychExe
+from sm.so_manager import InitSO
+from sm.so_manager import ActivateSO
+from sm.so_manager import DeploySO
+from sm.so_manager import ProvisionSO
+from sm.so_manager import RetrieveSO
+from sm.so_manager import UpdateSO
+from sm.so_manager import DestroySO
 
 
 # service state model:
