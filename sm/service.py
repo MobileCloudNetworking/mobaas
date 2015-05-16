@@ -35,7 +35,7 @@ from sm.backends import ServiceBackend
 from sm.config import CONFIG, CONFIG_PATH
 from sm.log import LOG
 from sdk.mcn import util
-from sdk.mcn.security import KeyStoneAuthService as token_checker
+from sdk.mcn.security import KeyStoneAuthService
 
 
 class SMRegistry(NonePersistentRegistry):
@@ -65,10 +65,9 @@ class MApplication(Application):
         return super(MApplication, self).register_backend(category, backend)
 
     def __call__(self, environ, response):
-        auth = environ.get('HTTP_X_AUTH_TOKEN', '')
-        # TODO validate the token against the AAA using the SDK
+        token = environ.get('HTTP_X_AUTH_TOKEN', '')
 
-        if auth == '':
+        if token == '':
             LOG.error('No X-Auth-Token header supplied.')
             raise HTTPError(400, 'No X-Auth-Token header supplied.')
 
@@ -78,11 +77,16 @@ class MApplication(Application):
             LOG.error('No X-Tenant-Name header supplied.')
             raise HTTPError(400, 'No X-Tenant-Name header supplied.')
 
-        # TODO fix: create instance!!!
-        if not token_checker.verify(token=auth, tenant_name=tenant):
+        design_uri = CONFIG.get('service_manager', 'design_uri', '')
+        if design_uri == '':
+                LOG.fatal('No design_uri parameter supplied in sm.cfg')
+                raise Exception('No design_uri parameter supplied in sm.cfg')
+
+        auth = KeyStoneAuthService(design_uri)
+        if not auth.verify(token=token, tenant_name=tenant):
             raise HTTPError(401, 'Token is not valid. You likely need an updated token.')
 
-        return self._call_occi(environ, response, token=auth, tenant_name=tenant, registry=self.registry)
+        return self._call_occi(environ, response, token=token, tenant_name=tenant, registry=self.registry)
 
 
 class Service():
