@@ -144,7 +144,7 @@ class Resolver():
                 }
                 svc_type_endpoint.append(type_ep)
             else:
-                LOG.info('stop feeding me crap!')  # TODO better exception
+                LOG.info('stop feeding me crap!')
                 raise RuntimeError('stop feeding me crap!')
 
         return svc_type_endpoint

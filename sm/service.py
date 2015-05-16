@@ -101,14 +101,12 @@ class Service():
         self.service_backend = ServiceBackend(app)
         LOG.info('Using configuration file: ' + CONFIG_PATH)
 
-        # NEW TODO token and tenant is now required in the config file
         self.token, self.tenant_name = self.get_service_credentials()
         self.design_uri = CONFIG.get('service_manager', 'design_uri', '')
         if self.design_uri == '':
                 LOG.fatal('No design_uri parameter supplied in sm.cfg')
                 raise Exception('No design_uri parameter supplied in sm.cfg')
 
-        # NEW TODO STG MUST be supplied with a SM
         self.stg = None
         stg_path = CONFIG.get('service_manager', 'manifest', '')
         if stg_path == '':
