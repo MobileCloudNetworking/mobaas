@@ -76,7 +76,7 @@ class Execution(object):
 
 class Decision(object):
 
-    def __init__(self, so_e, tenant, token):
+    def __init__(self, so_e, token, tenant):
         self.so_e = so_e
         self.tenant = tenant
         self.token = token
@@ -96,8 +96,6 @@ class Resolver():
         self.tenant = tenant
         self.region = 'RegionOne'
         self.stg = None
-        self.itg = None
-        self.stack_id = None
         self.results_q = Queue()
         self.jobs = []
         self.service_inst_endpoints = [] # contains endpoint, type, attribs of instance
