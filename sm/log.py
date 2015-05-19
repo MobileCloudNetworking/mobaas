@@ -16,9 +16,10 @@
 __author__ = 'andy'
 
 import logging
-from mcn.sm.config import CONFIG
 
+from sm.config import CONFIG
 
+# XXX this will not work inside of OpenShift - needs to be modded
 def config_logger(log_level=logging.DEBUG):
     logging.basicConfig(format='%(levelname)s %(asctime)s: \t%(message)s',
                         datefmt='%m/%d/%Y %I:%M:%S %p',
@@ -32,6 +33,7 @@ def config_logger(log_level=logging.DEBUG):
         hdlr.setFormatter(formatter)
         logger.addHandler(hdlr)
 
+    # TODO update with florian's greylog stack
     if CONFIG.get('general', 'log_server', '') != '':
         from logging.handlers import SocketHandler, DEFAULT_TCP_LOGGING_PORT
         socketh = SocketHandler(CONFIG.get('general', 'log_server', ''), DEFAULT_TCP_LOGGING_PORT)

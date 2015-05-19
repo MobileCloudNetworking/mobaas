@@ -9,8 +9,8 @@ from occi.core_model import Resource
 if 'SM_CONFIG_PATH' not in os.environ:
     raise AttributeError('Please provide SM_CONFIG_PATH as env var.')
 
-from mcn.sm import config_logger
-from mcn.sm import get_params
+from sm.sm import config_logger
+from sm.sm import get_params
 
 
 class TestInitFunctions(unittest.TestCase):

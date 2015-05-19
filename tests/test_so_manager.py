@@ -7,7 +7,7 @@ from occi.core_model import Resource
 
 if 'SM_CONFIG_PATH' not in os.environ or 'SM_TIMEIT' not in os.environ:
     raise AttributeError('Please provide SM_CONFIG_PATH, SM_TIMEIT as env vars.')
-from mcn.sm import so_manager
+from sm.sm import so_manager
 
 # Testing Constructor
 
