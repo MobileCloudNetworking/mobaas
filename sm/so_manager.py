@@ -407,6 +407,8 @@ class DeploySO(Task):
 
 
 # TODO this can only be executed when heat has completed!!!!
+# TODO that this is not an issue
+# XXX workaround: the logic of checking state can be covered in the SO
 class ProvisionSO(Task):
     def __init__(self, entity, extras):
         Task.__init__(self, entity, extras, state='provision')

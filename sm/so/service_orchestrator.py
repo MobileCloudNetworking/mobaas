@@ -88,6 +88,7 @@ class Decision(object):
         raise NotImplementedError()
 
 
+#TODO add some sanity checks in the case no service manifest is present
 class Resolver():
 
     def __init__(self, token, tenant):
@@ -403,6 +404,10 @@ class Resolver():
         """
         Report on state.
         """
+
+        # TODO as the resolver creates one or more instances, it would make sense to
+        # TODO group parameters by service type and include the service endpoint
+
         LOG.info('============ STATE ============')
         # for each service endpoint get their details and merge into one big dict
         # get the state of the heat template that may be part of this service
