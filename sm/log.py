@@ -34,17 +34,10 @@ def config_logger(log_level=logging.DEBUG):
         hdlr.setFormatter(formatter)
         logger.addHandler(hdlr)
 
-    # TODO update with florian's greylog stack
-    if CONFIG.get('general', 'log_server', '') != '':
-        from logging.handlers import SocketHandler, DEFAULT_TCP_LOGGING_PORT
-        socketh = SocketHandler(CONFIG.get('general', 'log_server', ''), DEFAULT_TCP_LOGGING_PORT)
-        logger.addHandler(socketh)
-
-    if CONFIG.get('logging', 'graylog_api', '') != '' and CONFIG.get('logging', 'graylog_port', '') != '':
-
-        gray_handler = graypy.GELFHandler(CONFIG.get('logging', 'graylog_api', ''), CONFIG.getint('logging', 'graylog_port'))
+    if CONFIG.get('general', 'graylog_api', '') != '' and CONFIG.get('general', 'graylog_port', '') != '':
+        gray_handler = graypy.GELFHandler(CONFIG.get('general', 'graylog_api', ''), CONFIG.getint('general', 'graylog_port'))
         logger.addHandler(gray_handler)
-
+    
     return logger
 
 LOG = config_logger()
