@@ -1,4 +1,4 @@
-# Copyright 2014 Zuercher Hochschule fuer Angewandte Wissenschaften
+# Copyright 2014-2015 Zuercher Hochschule fuer Angewandte Wissenschaften
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,25 +15,12 @@
 
 __author__ = 'andy'
 
-import ConfigParser
 import logging
-import time
-import os
 import graypy
 
-from optparse import OptionParser
+from sm.config import CONFIG
 
-
-class DefaultConfigParser(ConfigParser.ConfigParser):
-
-    def get(self, section, option, default='', raw=False, vars=None):
-        try:
-            value = ConfigParser.ConfigParser.get(self, section, option, raw, vars)
-        except ConfigParser.NoOptionError:
-            value = default
-        return value
-
-
+# XXX this will not work inside of OpenShift - needs to be modded
 def config_logger(log_level=logging.DEBUG):
     logging.basicConfig(format='%(levelname)s %(asctime)s: \t%(message)s',
                         datefmt='%m/%d/%Y %I:%M:%S %p',
@@ -47,6 +34,7 @@ def config_logger(log_level=logging.DEBUG):
         hdlr.setFormatter(formatter)
         logger.addHandler(hdlr)
 
+    # TODO update with florian's greylog stack
     if CONFIG.get('general', 'log_server', '') != '':
         from logging.handlers import SocketHandler, DEFAULT_TCP_LOGGING_PORT
         socketh = SocketHandler(CONFIG.get('general', 'log_server', ''), DEFAULT_TCP_LOGGING_PORT)
@@ -59,30 +47,4 @@ def config_logger(log_level=logging.DEBUG):
 
     return logger
 
-
-def get_params():
-    parser = OptionParser(usage="Usage: %prog options. See %prog -h for options.")
-    parser.add_option("-c", "--config-file",
-                      action="store",
-                      type="string",
-                      dest="config_file_path",
-                      help="Path to the service manager configuration file.")
-    (options, args) = parser.parse_args()
-
-    if not options.config_file_path:
-        parser.error("Wrong number of arguments.")
-
-    return options
-
-CONFIG = DefaultConfigParser()
-
-if 'SM_CONFIG_PATH' in os.environ:
-    config_file_path = os.getenv('SM_CONFIG_PATH')
-    CONFIG.read(config_file_path)
-else:
-    options = get_params()
-    config_file_path = options.config_file_path
-    CONFIG.read(config_file_path)
-
 LOG = config_logger()
-LOG.info('Using configuration file: ' + config_file_path)

@@ -1,4 +1,4 @@
-# Copyright 2014 Zuercher Hochschule fuer Angewandte Wissenschaften
+# Copyright 2014-2015 Zuercher Hochschule fuer Angewandte Wissenschaften
 # All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,17 +15,17 @@
 
 __author__ = 'andy'
 
-from occi.backend import ActionBackend, KindBackend
+from occi.backend import KindBackend
 
-from mcn.sm.so_manager import ServiceParameters
-from mcn.sm.so_manager import AsychExe
-from mcn.sm.so_manager import InitSO
-from mcn.sm.so_manager import ActivateSO
-from mcn.sm.so_manager import DeploySO
-from mcn.sm.so_manager import ProvisionSO
-from mcn.sm.so_manager import RetrieveSO
-from mcn.sm.so_manager import UpdateSO
-from mcn.sm.so_manager import DestroySO
+from sm.so_manager import ServiceParameters
+from sm.so_manager import AsychExe
+from sm.so_manager import InitSO
+from sm.so_manager import ActivateSO
+from sm.so_manager import DeploySO
+from sm.so_manager import ProvisionSO
+from sm.so_manager import RetrieveSO
+from sm.so_manager import UpdateSO
+from sm.so_manager import DestroySO
 
 
 # service state model:
@@ -39,7 +39,7 @@ from mcn.sm.so_manager import DestroySO
 #  - fail
 
 
-class ServiceBackend(KindBackend, ActionBackend):
+class ServiceBackend(KindBackend):
     """
     Provides the basic functionality required to CRUD SOs
     """
@@ -72,8 +72,4 @@ class ServiceBackend(KindBackend, ActionBackend):
         UpdateSO(old, extras, new).run()
 
     def replace(self, old, new, extras):
-        raise NotImplementedError()
-
-    # currently not exposed on the kind
-    def action(self, entity, action, attributes, extras):
         raise NotImplementedError()

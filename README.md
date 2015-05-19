@@ -1,5 +1,7 @@
 # MCN Service Manger
 
+**NOTE: THIS DOCUMENTATION REQUIRES UPDATES!!!**
+
 This is the MCN Service Manager.
 
 To checkout the code and also setup the example SO, do the following:
