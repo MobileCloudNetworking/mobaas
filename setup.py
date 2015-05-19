@@ -22,5 +22,5 @@ setup(name='mcn_sm',
       url='http://blog.zhaw.ch/icclab',
       license='Apache 2.0',
       packages=['mcn', 'mcn.sm', 'mcn.so'],
-      requires=['pyssf', 'requests', 'mako', 'retrying']
+      install_requires=['pyssf', 'requests', 'mako', 'retrying', 'graypy']
      )

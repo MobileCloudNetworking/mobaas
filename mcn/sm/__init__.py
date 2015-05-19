@@ -19,6 +19,7 @@ import ConfigParser
 import logging
 import time
 import os
+import graypy
 
 from optparse import OptionParser
 
@@ -50,6 +51,11 @@ def config_logger(log_level=logging.DEBUG):
         from logging.handlers import SocketHandler, DEFAULT_TCP_LOGGING_PORT
         socketh = SocketHandler(CONFIG.get('general', 'log_server', ''), DEFAULT_TCP_LOGGING_PORT)
         logger.addHandler(socketh)
+
+    if CONFIG.get('logging', 'graylog_api', '') != '' and CONFIG.get('logging', 'graylog_port', '') != '':
+
+        gray_handler = graypy.GELFHandler(CONFIG.get('logging', 'graylog_api', ''), CONFIG.getint('logging', 'graylog_port'))
+        logger.addHandler(gray_handler)
 
     return logger
 
