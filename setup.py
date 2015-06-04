@@ -16,13 +16,15 @@
 
 from distutils.core import setup
 
-setup(name='sm',
-      version='0.3',
-      description='Library for creating service managers and orchestrators',
-      author='Andy Edmonds',
-      author_email='edmo@zhaw.ch',
-      url='http://blog.zhaw.ch/icclab',
-      license='Apache 2.0',
-      packages=['sm', 'sm.so'],
-      requires=['pyssf', 'requests', 'mako', 'retrying', 'tornado', 'graypy']
-     )
+setup(
+    name='sm',
+    version='0.3',
+    description='Library for creating service managers and orchestrators',
+    author='Andy Edmonds',
+    author_email='edmo@zhaw.ch',
+    url='http://blog.zhaw.ch/icclab',
+    license='Apache 2.0',
+    packages=['sm', 'sm.so'],
+    requires=['pyssf', 'requests', 'mako', 'retrying', 'tornado', 'graypy'],
+    scripts=['bin/service_manager']
+)

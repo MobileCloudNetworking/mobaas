@@ -1,0 +1,53 @@
+{
+    "service_type": "http://schemas.mobile-cloud-networking.eu/occi/sm#test-e2e",
+    "service_description": "End-to-end service",
+    "service_attributes": {
+        "mcn.endpoint.nat": "immutable",
+        "mcn.endpoint.rcb.mgt": "immutable",
+        "mcn.endpoint.enodeb": "immutable",
+        "mcn.endpoint.dns": "immutable",
+        "mcn.endpoint.p-i-s-cscf": "immutable",
+        "mcn.endpoint.maas": "immutable",
+        "mcn.endpoint.mme-pgw_c-sgw_c": "immutable"
+    },
+    "service_endpoint": "http://e2e.cloudcomplab.ch:8888/e2e/",
+    "depends_on": [
+      { "http://schemas.mobile-cloud-networking.eu/occi/sm#cdn": { "inputs": [] } },
+      { "http://schemas.mobile-cloud-networking.eu/occi/sm#maas": { "inputs": [] } },
+      { "http://schemas.mobile-cloud-networking.eu/occi/sm#rcb": { "inputs": [] } },
+      { "http://schemas.mobile-cloud-networking.eu/occi/sm#dnsaas": {
+          "inputs": [
+            "http://schemas.mobile-cloud-networking.eu/occi/sm#maas#mcn.endpoint.maas"
+          ] }
+      },
+      { "http://schemas.mobile-cloud-networking.eu/occi/sm#ran": {
+          "inputs": [
+            "http://schemas.mobile-cloud-networking.eu/occi/sm#maas#mcn.endpoint.maas"
+          ] }
+      },
+      { "http://schemas.mobile-cloud-networking.eu/occi/sm#dss": {
+        "inputs": [
+          "http://schemas.mobile-cloud-networking.eu/occi/sm#maas#mcn.endpoint.maas",
+          "http://schemas.mobile-cloud-networking.eu/occi/sm#dnsaas#mcn.endpoint.api",
+          "http://schemas.mobile-cloud-networking.eu/occi/sm#cdn#mcn.endpoints.cdn.mgt",
+          "http://schemas.mobile-cloud-networking.eu/occi/sm#cdn#mcn.endpoints.cdn.origin",
+          "http://schemas.mobile-cloud-networking.eu/occi/sm#cdn#mcn.cdn.password",
+          "http://schemas.mobile-cloud-networking.eu/occi/sm#cdn#mcn.cdn.id"
+        ] }
+      },
+      { "http://schemas.mobile-cloud-networking.eu/occi/sm#ims": {
+          "inputs": [
+            "http://schemas.mobile-cloud-networking.eu/occi/sm#maas#mcn.endpoint.maas",
+            "http://schemas.mobile-cloud-networking.eu/occi/sm#dnsaas#mcn.endpoint.forwarder",
+            "http://schemas.mobile-cloud-networking.eu/occi/sm#dnsaas#mcn.endpoint.api"
+          ] }
+      },
+      { "http://schemas.mobile-cloud-networking.eu/occi/sm#epc": {
+          "inputs": [
+            "http://schemas.mobile-cloud-networking.eu/occi/sm#maas#mcn.endpoint.maas",
+            "http://schemas.mobile-cloud-networking.eu/occi/sm#dnsaas#mcn.endpoint.forwarder",
+            "http://schemas.mobile-cloud-networking.eu/occi/sm#dnsaas#mcn.endpoint.api"
+          ] }
+      }
+    ]
+}
