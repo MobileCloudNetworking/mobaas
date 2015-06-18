@@ -22,8 +22,8 @@ from config import CONFIG
 from log import LOG
 
 
-WAIT = CONFIG.get('cloud_controller', 'wait_time', 2000)
-ATTEMPTS = CONFIG.get('cloud_controller', 'max_attempts', 5)
+WAIT = int(CONFIG.get('cloud_controller', 'wait_time', 2000))
+ATTEMPTS = int(CONFIG.get('cloud_controller', 'max_attempts', 5))
 
 
 def retry_if_http_error(exception):
