@@ -1,5 +1,5 @@
 # Testing SO without deploying it using CC
-
+#
 Goto the directory of mcn_cc_sdk & setup virtenv (Note: could be done easier):
 
     $ virtualenv /tmp/mcn_test_virt
