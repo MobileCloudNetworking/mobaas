@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+#
 #   Copyright 2014-2015 Zuercher Hochschule fuer Angewandte Wissenschaften
 #   All Rights Reserved.
 #   Licensed under the Apache License, Version 2.0 (the "License");
