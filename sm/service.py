@@ -132,7 +132,9 @@ class Service():
             LOG.info('Using ' + self.stg['service_endpoint'] + ' as the service_endpoint value '
                                                                'from service manifest')
             up = urlparse(self.stg['service_endpoint'])
-            self.service_endpoint = up.scheme + '://' + up.hostname + ':' + str(up.port)
+            
+            self.service_endpoint = up.scheme + '://' + up.hostname + ':' + str(up.port) + '/' + str('mobaas')
+	    LOG.info(self.service_endpoint)
 
     def get_service_credentials(self):
         token = CONFIG.get('service_manager_admin', 'service_token', '')
@@ -154,7 +156,7 @@ class Service():
                                                          url_type='public')
 
         if self.srv_ep is None or self.srv_ep == '':
-            LOG.debug('Registering the service with the keystone service...')
+            LOG.debug('RRRegistering the service with the keystone service...')
 
             keystone = client.Client(token=self.token, tenant_name=self.tenant_name, auth_url=self.design_uri)
 
@@ -166,6 +168,9 @@ class Service():
             internal_url = admin_url = public_url = self.service_endpoint
 
             self.ep = keystone.endpoints.create(self.region, self.srv_ep.id, public_url, admin_url, internal_url)
+
+            LOG.info(self.service_endpoint)
+
             LOG.info('Service is now registered with keystone: ' +
                      'Region: ' + self.ep.region +
                      ' Public URL:' + self.ep.publicurl +
