@@ -1,0 +1,6 @@
+#!/bin/bash
+
+echo "Setting DESIGN_URI environment variable"
+
+export DESIGN_URI='http://bart.cloudcomplab.ch:35357/v2.0'
+
