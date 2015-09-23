@@ -10,7 +10,7 @@ if 'SM_CONFIG_PATH' not in os.environ or 'SM_TIMEIT' not in os.environ:
 from sm.sm import so_manager
 
 # Testing Constructor
-
+#
 @patch('mcn.sm.so_manager.CONFIG')
 @patch('mcn.sm.so_manager.LOG')
 class TestSOMConstruction(unittest.TestCase):
