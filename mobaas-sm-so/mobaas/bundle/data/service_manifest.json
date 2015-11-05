@@ -1,0 +1,9 @@
+{
+  "service_type": "http://schemas.mobile-cloud-networking.eu/occi/sm#mobaas",
+  "service_description": "MCN MOBaaS Service",
+  "service_attributes": {
+      "mcn.endpoint.mobaas": "immutable"
+  },
+  "service_endpoint": "http://mob.cloudcomplab.ch:8900/mobaas/",
+  "depends_on": []
+}

@@ -1,0 +1,232 @@
+import datetime
+import pprint
+import timeit
+
+from mobaas.common import error_logging as err
+from mobaas.common import support
+from mobaas.common import config as common_config
+
+from mobaas.mobaas_protocol import message_objects as mo
+from mobaas.mobaas_protocol import data_objects
+
+from mobaas.clear_data import clear_data
+
+from mobaas.algorithms import bandwidth_prediction as bp
+from mobaas.algorithms import mobility_prediction as mp
+from mobaas.algorithms import multi_user_prediction as mup
+
+from mobaas.frontend_support import missing_resources as mr
+from threading import Timer # for the MP answer loop
+
+
+'''
+This module specifies the logic of how to handle an incoming message
+from either a consumer or supplier/MaaS.
+
+The consumer functions are big because each needs to manipulate data and call
+a lot of functions in order to check:
+- Retrieve the data
+- Is the data complete?
+- If not put the request pending and request missing data from supplier
+- If so calculate the answer and return the answer to the consumer
+'''
+def handle_incoming_message_consumer(frontend, connection, msg):
+    err.log_error(err.INFO, "Received request {" + str(msg) + "}")
+
+    if isinstance(msg, mo.BPSingleLinkRequest):
+        handle_incoming_bp_single_link_request(frontend, connection, msg)
+    elif isinstance(msg, mo.MPSingleUserRequest):
+        handle_incoming_mp_single_user_request(frontend, connection, msg)
+    elif isinstance(msg, mo.MPMultiUserRequest):
+        handle_incoming_mp_multi_user_request(frontend, connection, msg)
+    elif isinstance(msg, mo.EndConversation):
+        err.log_error(err.INFO, "Consumer Connection " + str(connection) + " is requested to end because: " + msg.reason)
+        connection.close()
+
+
+def handle_incoming_mp_single_user_request(frontend, connection, msg):
+    err.log_error(err.INFO, "Using MP algorithm")
+    predicted_date_time = datetime.datetime.combine(msg.current_date, msg.current_time) + datetime.timedelta(seconds=msg.future_time_delta)
+    predicted_date = predicted_date_time.date()
+    predicted_time = predicted_date_time.time()
+
+    '''
+    if user_id is 0000 (i.e. 0, because it is an integer), we need to use multi-user prediction, not single user prediction
+    '''
+    if msg.user_id != 0:
+        mp_fetched = mp.retrieve_user_mobility_data_single_user(frontend.dbcc, msg.user_id, msg.current_date, predicted_date)
+        grouped_by_date_mp_fetched = support.group_by(mp_fetched, lambda x: x.date)
+
+        grouped_by_date_grid_by_minute_of_day_mp_fetched = {}
+        for date, mp_fetched_list in grouped_by_date_mp_fetched.items():
+            minute_of_day_grid = support.to_grid( mp_fetched_list
+                                                , 1
+                                                , lambda x: x.minute_of_day
+                                                , 0
+                                                , common_config.MINUTES_IN_A_DAY - 1
+                                                )
+            grouped_by_date_grid_by_minute_of_day_mp_fetched[date] = minute_of_day_grid
+
+        missing_ranges = mp.check_user_mobility_data_single_user_integrity( grouped_by_date_grid_by_minute_of_day_mp_fetched
+                                                                          , msg.current_date
+                                                                          )
+
+        if len(missing_ranges) > 0:
+            #Missing user information data, queue request and ask data from supplier
+            missing_resource = mr.MissingUserInfo(missing_ranges)
+            frontend.queue_as_pending_request(connection, msg, [missing_resource])
+
+            err.log_error(err.INFO, "Did not have enough user info data. Asking supplier for: " + str(missing_ranges))
+
+            error_message = mo.Error(102, "MP Request will take longer than expected because user data is missing at MOBaaS")
+            connection.add_message(error_message)
+
+            for missing_range in missing_ranges:
+                start_time = missing_range.min_range.time()
+                start_date = missing_range.min_range.date()
+                time_span = int((missing_range.max_range - missing_range.min_range).total_seconds())
+
+                supplier_message = mo.MaaSSingleUserDataRequest(msg.user_id, start_time, start_date, time_span, 60)
+                frontend.ask_at_supplier(supplier_message)
+        else:
+            #There is all the info we need, calculate the spots
+            current_day_str = support.calc_day(msg.current_date)
+            predicted_day_str = support.calc_day(predicted_date)
+
+            pykov_chain = mp.prepare_pykov_chain_with_single_user_mobility_states(grouped_by_date_grid_by_minute_of_day_mp_fetched
+                                                                                 , current_day_str
+                                                                                 , predicted_day_str
+                                                                                 )
+            chance_distribution_dict = mp.mobility_prediction(pykov_chain, msg.current_cell_id, msg.current_date, msg.current_time, predicted_date, predicted_time)
+
+            #Create mobaas_protocol.prediction objects from the answers
+            mobaas_protocol_predictions = mp.from_pykov_distribution_dict_to_predictions(chance_distribution_dict)
+
+            answer_message = mo.MPSingleUserAnswer(msg.user_id, predicted_time, predicted_date, mobaas_protocol_predictions)
+            connection.add_message(answer_message)
+            err.log_error(err.INFO, "Found an answer to the request! Answer:" + str(answer_message))
+    else:
+        print 'error: should not get here!'
+        # load multi_user_prediction.py
+        #result = mup.mp(msg.user_id, msg.current_time, msg.current_date, predicted_time)
+        # don't forget to add message to mobaas.mobaas_protocol.* !!
+        #answer_message = mo.MPMultiUserAnswer(result)
+        #connection.add_message(answer_message)
+
+        # done
+
+def handle_incoming_mp_multi_user_request(frontend, connection, msg, iteration=0):
+    err.log_error(err.INFO, "Using MP multi-user algorithm, iteration %d" % iteration)
+    start_time = timeit.default_timer()
+    # do this every msg.future_time_delta minutes
+    #result = mup.mp(msg.user_id, msg.current_time, msg.current_date, msg.future_time_delta)
+
+    current_time_in_min = sum(int(x) * 60 ** i for i,x in enumerate(reversed(msg.current_time.split(':'))))
+    next_time_in_min = current_time_in_min + (iteration * msg.future_time_delta)
+    next_time_formatted = '{:02d}:{:02d}'.format(*divmod(next_time_in_min, 60))
+
+    if next_time_in_min > 1440 - msg.future_time_delta:
+        return;
+
+    result = mup.mp(msg.user_id, next_time_formatted, msg.current_date, msg.future_time_delta)
+
+    mu_predictions = []
+
+    for k in result.keys():
+        (user_id, current_cell_id, next_time) = k
+        #err.log_error(err.INFO, "Processing result entry for %i %i %s " % (user_id, current_cell_id, next_time))
+        probabilities = result[k]
+        #user_entry = UserEntry.from_pykov_key(pykov_key)
+        #prediction = data_objects.Prediction(user_entry.cell_id, probability)
+	    #prediction_obj = mp.from_pykov_distribution_dict_to_predictions(probabilities)
+        predictions = []
+        for p in probabilities:
+            (cell_id, probability) = p
+            predictions.append(data_objects.Prediction(cell_id, probability))
+
+        mu_prediction = data_objects.MultiUserPrediction(user_id, current_cell_id, next_time, predictions)
+        mu_predictions.append(mu_prediction)
+
+    answer_message = mo.MPMultiUserAnswer(mu_predictions)
+    err.log_error(err.INFO, "answer_message before sending it:")
+    pprint.pprint(answer_message)
+    connection.add_message(answer_message)
+
+    #self.mp_multi_user_loop_helper(frontend, connection, msg, iteration+1)
+    err.log_error(err.INFO, "Execution time for this run (iteration %d) is : %d , Second" % (iteration, timeit.default_timer() - start_time))
+    Timer(msg.future_time_delta, handle_incoming_mp_multi_user_request, (frontend, connection, msg, iteration+1)).start()
+
+#def mp_multi_user_loop_helper(frontend, connection, msg, iteration):
+#    err.log_error(err.INFO, "MP multi-user algorithm loop, iteration %d" % iteration)
+#    Timer(msg.future_time_delta, handle_incoming_mp_multi_user_request, (frontend, connection, msg, iteration)).start()
+
+
+def handle_incoming_bp_single_link_request(frontend, connection, msg):
+    err.log_error(err.INFO, "Using BP algorithm")
+
+    list_link_capacity_data = bp.retrieve_link_capacity_data(frontend.dbcc, msg.link_id)
+
+    if len(list_link_capacity_data) == 0:
+        #Don't have any capacity data
+        missing_resource = mr.MissingLinkCapacity(msg.link_id)
+        frontend.queue_as_pending_request(connection, msg, [missing_resource])
+
+        err.log_error(err.INFO, "Did not have the link capacity, asking from supplier " + str(msg.link_id))
+
+        error_message = mo.Error(102, "BP Request will take longer than expected because link_capacity data is missing at MOBaaS")
+        connection.add_message(error_message)
+
+        supplier_message = mo.MaaSSingleLinkCapacityRequest(msg.link_id)
+        frontend.ask_at_supplier(supplier_message)
+    else:
+        #Capacity data available!
+
+        bpfetched = bp.retrieve_bandwidth_prediction_data(frontend.dbcc, msg.link_id, msg.current_date, msg.current_time)
+        missing_ranges = bp.check_integrity_bandwidth_prediction_data(bpfetched, msg.current_date, msg.current_time)
+
+        if len(missing_ranges) == 0:
+            #All data available. Send answer!
+            in_use = bp.bandwidth_prediction(bpfetched)
+            left_over_capacity = list_link_capacity_data[0].capacity - in_use
+
+            answer_message = mo.BPSingleLinkAnswer(msg.link_id, msg.current_time, msg.current_date, left_over_capacity)
+            connection.add_message(answer_message)
+            err.log_error(err.INFO, "Found an answer to the request! Answer: " + str(answer_message))
+        else:
+            #Missing flow data
+            missing_resource = mr.MissingFlowData(missing_ranges)
+            frontend.queue_as_pending_request(connection, msg, [missing_resource])
+
+            err.log_error(err.INFO, "Did not have enough flow data, asking from supplier: " + str(missing_ranges))
+
+            error_message = mo.Error(102, "BP Request will take longer than expected because flow data is missing at MOBaaS")
+            connection.add_message(error_message)
+
+            for missing_range in missing_ranges:
+                start_dt = support.from_unix_timestamp_to_datetime(missing_range.min_range)
+                timespan = missing_range.max_range - missing_range.min_range
+
+                supplier_message = mo.MaaSSingleLinkDataRequest(msg.link_id, start_dt.date(), start_dt.time(), timespan)
+                frontend.ask_at_supplier(supplier_message)
+
+'''
+Direct any incoming supplier messages directly to the clear_data component
+After that, use the supplied resource to update the missing resource in the frontend
+'''
+def handle_incoming_message_supplier(frontend, connection, msg):
+    dbcc = frontend.dbcc
+    err.log_error(err.INFO, "Received Supplier message of type: " + str(msg.__class__))
+    supplied_resource = None
+
+    if isinstance(msg, mo.MaaSSingleUserDataAnswer):
+        supplied_resource = clear_data.clear_user_information_maas_message(dbcc, msg)
+    elif isinstance(msg, mo.MaaSSingleLinkDataAnswer):
+        supplied_resource = clear_data.clear_single_link_maas_message(dbcc, msg)
+    elif isinstance(msg, mo.MaaSSingleLinkCapacityAnswer):
+        supplied_resource = clear_data.clear_single_link_capacity_message(dbcc, msg)
+    elif isinstance(msg, mo.EndConversation):
+        err.log_error(err.INFO, "Supplier Connection " + str(connection) + " is requested to end because: " + msg.reason)
+        connection.close()
+
+    if supplied_resource:
+        frontend.process_supplied_resource(supplied_resource)

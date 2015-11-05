@@ -1,0 +1,18 @@
+#!/bin/bash
+
+echo "Installing Base Dependencies"
+curl -k -o $OPENSHIFT_DATA_DIR/dl-cache.tgz 'https://owncloud.mobile-cloud-networking.eu/owncloud/public.php?service=files&t=78068cf2a7e9d6039db590f90779f983&download'
+tar xzf $OPENSHIFT_DATA_DIR/dl-cache.tgz -C $OPENSHIFT_DATA_DIR
+pip install $OPENSHIFT_DATA_DIR/dl-cache/pip-6.1.1.tar.gz
+pip install --index-url=file://$OPENSHIFT_DATA_DIR/dl-cache/simple -r $OPENSHIFT_DATA_DIR/dl-cache/requirements.txt
+
+echo "Installing MCN SDK"
+curl -k -o $OPENSHIFT_DATA_DIR/sdk.tar.gz 'https://owncloud.mobile-cloud-networking.eu/owncloud/public.php?service=files&t=01ad0519e7e4ad9bc8fdbf5f959f183e&download'
+pip install $OPENSHIFT_DATA_DIR/sdk.tar.gz
+
+echo "Installing MCN SM SO lib"
+curl -k -o $OPENSHIFT_DATA_DIR/sm.tar.gz 'https://owncloud.mobile-cloud-networking.eu/owncloud/public.php?service=files&t=f421b598d6939c614bef52018bb421d3&download'
+pip install $OPENSHIFT_DATA_DIR/sm.tar.gz
+
+echo "Installing Zabbix API"
+pip install zabbix-api

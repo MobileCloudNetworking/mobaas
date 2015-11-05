@@ -1,0 +1,232 @@
+import json
+
+from mobaas.common import support
+
+'''
+ORM based approach on parsing a json type
+to python types and checking if everything
+is in the json type or not.
+'''
+class FormatException(Exception):
+    def __init__(self, message=""):
+        Exception.__init__(self, message)
+
+
+class ProtocolType:
+    def __init__(self):
+        pass
+
+    @classmethod
+    def parse_json(cls, json_value):
+        return None
+
+    @classmethod
+    def generate_json(cls, value):
+        return None
+
+
+class ProtocolSimpleType(ProtocolType):
+    simple_type = None
+
+    def __init__(self):
+        ProtocolType.__init__(self)
+
+    @classmethod
+    def parse_json(cls, json_value):
+        if not (cls.simple_type is type(json_value)):
+            try:
+                json_value = cls.simple_type(json_value)
+            except:
+                raise FormatException("Expected type " + str(cls.simple_type) + " but found a value with type " + str(type(json_value)) +" and value " + str(json_value))
+
+        return json_value
+
+
+class ProtocolInt(ProtocolSimpleType):
+    simple_type = int
+
+    def __init__(self):
+        ProtocolSimpleType.__init__(self)
+
+    @classmethod
+    def generate_json(cls, value):
+        return str(value)
+
+
+class ProtocolFloat(ProtocolSimpleType):
+    simple_type = float
+
+    def __init__(self):
+        ProtocolSimpleType.__init__(self)
+
+    @classmethod
+    def generate_json(cls, value):
+        return str(value)
+
+
+class ProtocolString(ProtocolSimpleType):
+    simple_type = unicode
+
+    def __init__(self):
+        ProtocolSimpleType.__init__(self)
+
+    @classmethod
+    def generate_json(cls, value):
+        encoder = json.JSONEncoder()
+        return encoder.encode(value)
+
+    @classmethod
+    def parse_json(cls, json_value):
+        if not (cls.simple_type is type(json_value)):
+            raise FormatException("Expected type " + str(cls.simple_type) + " but found a value with type " + str(type(json_value)))
+
+        return str(json_value)
+
+
+class ProtocolListType(ProtocolType):
+    def __init__(self, element_type):
+        ProtocolType.__init__(self)
+        self.element_type = element_type
+
+    def parse_json(self, json_value):
+        if not (type(json_value) is list):
+            raise FormatException("Expected a list type value here, but found " + str(type(json_value)))
+
+        result = []
+        for item in json_value:
+            result.append(self.element_type.parse_json(item))
+
+        return result
+
+    def generate_json(self, value):
+        list_body = [self.element_type.generate_json(x) for x in value]
+        list_body_str = ", ".join(list_body)
+
+        return "[" + list_body_str + "]"
+
+
+class ProtocolDictType(ProtocolType):
+    expected_keys_types = []
+
+    def __init__(self):
+        ProtocolType.__init__(self)
+
+    def __eq__(self, other):
+        result = True
+        for expected_key, _ in self.expected_keys_types:
+            if getattr(self, expected_key) != getattr(other, expected_key):
+                result = False
+
+        return result
+
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    @classmethod
+    def get_expected_keys(cls):
+        return [key for key, type in cls.expected_keys_types]
+
+    @classmethod
+    def get_expected_keys_types(cls):
+        return cls.expected_keys_types
+
+    @classmethod
+    def find_missing_keys(cls, to_check):
+        missing = []
+        for expected_key in cls.get_expected_keys():
+            if not (expected_key in to_check):
+                missing.append(expected_key)
+
+        return missing
+
+    '''
+    Used to parse a dictionary objects.
+    Aka sees if all the fields are there or not.
+    '''
+    @classmethod
+    def parse_json_dict(cls, json_value):
+        json_dict = {}
+
+        if not (type(json_value) is dict):
+            raise FormatException("Expected a dict type value here, but found " + str(type(json_value)))
+        else:
+            missing = cls.find_missing_keys(json_value)
+
+            if len(missing) != 0:
+                missing_str = ", ".join(missing)
+                raise FormatException("Expected keys {" + missing_str + "} but could not find them in dict " + str(json_value))
+            else:
+                for expected_key, expected_type in cls.get_expected_keys_types():
+                    json_dict[expected_key] = expected_type.parse_json(json_value[expected_key])
+
+        return json_dict
+
+    '''
+    Used as an ORM function for inheritors to build themselves based from a
+    json dictionary to an instance of themselves
+    '''
+    @classmethod
+    def parse_json(cls, json_value):
+        constructor_values = []
+        json_dict = cls.parse_json_dict(json_value)
+
+        for expected_key in cls.get_expected_keys():
+            constructor_values.append(json_dict[expected_key])
+
+        return cls(*constructor_values)
+
+    @classmethod
+    def generate_json(cls, json_value):
+        keys_values_str = []
+        for key, type in cls.expected_keys_types:
+            value_str = type.generate_json(getattr(json_value, key))
+
+            keys_values_str.append("\"" + key + "\": " + value_str)
+
+        return "{" + ", ".join(keys_values_str) + "}"
+
+
+class ProtocolDate(ProtocolType):
+    def __init__(self):
+        ProtocolType.__init__(self)
+
+    @classmethod
+    def parse_json(cls, json_value):
+        if not (type(json_value) is unicode):
+            raise FormatException("Expected type " + str(unicode) + " for date conversion but found a value with type " + str(type(json_value)))
+        else:
+            json_value = str(json_value)
+            date = support.create_date(json_value)
+
+            if date is None:
+                raise FormatException("Expected a ISO 8601 date string but found " + json_value)
+
+        return date
+
+    @classmethod
+    def generate_json(cls, value):
+        return "\"" + support.create_date_str(value) + "\""
+
+
+class ProtocolTime(ProtocolType):
+
+    def __init__(self):
+        ProtocolType.__init__(self)
+
+    @classmethod
+    def parse_json(cls, json_value):
+        if not (type(json_value) is unicode):
+            raise FormatException("Expected type " + str(unicode) + " for time conversion but found a value with type " + str(type(json_value)))
+        else:
+            json_value = str(json_value)
+            time = support.create_time(json_value)
+
+            if time is None:
+                raise FormatException("Expected a ISO 8601 time string but found " + json_value)
+
+        return time
+
+    @classmethod
+    def generate_json(cls, value):
+        return "\"" + support.create_time_str(value) + "\""

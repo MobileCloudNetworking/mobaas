@@ -1,0 +1,4 @@
+include setup.py
+include LICENSE
+include etc/sm.cfg
+include bin/service_manager.py

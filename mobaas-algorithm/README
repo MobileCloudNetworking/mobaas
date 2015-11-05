@@ -1,0 +1,17 @@
+Welcome to the MOBaaS Code!
+
+A lot of work has been put into the creation of MOBaaS.
+In order to start a component MOBaaS in a normal environment do:
+
+- install.sh                  | Install the MOBaaS code to the current environment
+- 1_start_test_maas.sh        | Start the test MaaS. Configuration at mobaas/demo_programmes/config.py
+- 2_start_mobaas.sh           | Start MOBaaS. Configuration at mobaas/config.py
+- 3_start_test_mp_consumer.sh | Start the test BP consumer. Configuration at mobaas/demo_programmes/config.py
+- 4_start_test_bp_consumer.sh | Start the test MP consumer. Configuration at mobaas/demo_programmes/config.py
+- remove.sh                   | Remove all of the installed dependancies and MOBaaS code from environment
+- start_self_test.sh          | Run a series of unit tests on the code
+
+Of course you first have to install.sh before you can start any of the other components.
+
+CAUTION: In order to install correctly, the current environment needs an internet connection to download packages through.
+CAUTION: remove.sh is VERY thorough! E.g. install.sh will install the mysql server through apt-get if needed and remove.sh will remove it nonetheless if it was already installed or not

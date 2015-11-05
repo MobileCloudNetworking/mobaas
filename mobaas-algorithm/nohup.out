@@ -1,0 +1,451 @@
+mysql --user=root --password="mcn_MOBaaS" --execute="CREATE DATABASE IF NOT EXISTS  test_maas;";
+PYTHONPATH=/home/ubuntu
+[13:26:06:799159 15-09-2015](info): Found MySQLdb correctly
+[13:26:06:799300 15-09-2015](info): Found numpy correctly
+[13:26:06:799416 15-09-2015](info): Found pykov correctly
+[13:26:06:799442 15-09-2015](info): Create multiple database connections
+[13:26:06:799494 15-09-2015](info): Connection 0 has been added to Connection_Collection Setting up all tables
+[13:26:06:799519 15-09-2015](info): Connection 1 has been added to Connection_Collection Setting up all tables
+[13:26:06:799535 15-09-2015](info): Connection 2 has been added to Connection_Collection Setting up all tables
+[13:26:06:799550 15-09-2015](info): Connection 3 has been added to Connection_Collection Setting up all tables
+[13:26:06:799565 15-09-2015](info): Connection 4 has been added to Connection_Collection Setting up all tables
+[13:26:06:812881 15-09-2015](info): Succesfully started all db connections. Doing maintenance...
+[13:26:06:824169 15-09-2015](info): Table created: bp_fetch
+[13:26:06:853370 15-09-2015](info): Table created: band_pred
+[13:26:06:861841 15-09-2015](info): Table created: flow_data
+[13:26:06:869948 15-09-2015](info): Table created: link_capacity
+[13:26:06:877833 15-09-2015](info): Table created: mp_fetch
+[13:26:06:885664 15-09-2015](info): Table created: mob_pred
+[13:26:06:894773 15-09-2015](info): Table created: user_mobility_information
+[13:26:06:894803 15-09-2015](info): All database connections are being closed...
+./2_start_mobaas.sh: line 5: /var/log/webservice.log: Permission denied
+[13:26:06:940311 15-09-2015](info): Found MySQLdb correctly
+[13:26:06:940453 15-09-2015](info): Found numpy correctly
+[13:26:06:940564 15-09-2015](info): Found pykov correctly
+[13:26:06:940589 15-09-2015](info): Create multiple database connections
+[13:26:06:940608 15-09-2015](info): Connection 0 has been added to Connection_Collection Clearing all databases
+[13:26:06:940626 15-09-2015](info): Connection 1 has been added to Connection_Collection Clearing all databases
+[13:26:06:940641 15-09-2015](info): Connection 2 has been added to Connection_Collection Clearing all databases
+[13:26:06:940656 15-09-2015](info): Connection 3 has been added to Connection_Collection Clearing all databases
+[13:26:06:940671 15-09-2015](info): Connection 4 has been added to Connection_Collection Clearing all databases
+[13:26:06:955303 15-09-2015](info): Succesfully started all db connections. Doing maintenance...
+[13:26:06:961195 15-09-2015](info): Table deleted: bp_fetch
+[13:26:06:966125 15-09-2015](info): Table deleted: band_pred
+[13:26:06:971017 15-09-2015](info): Table deleted: flow_data
+[13:26:06:975679 15-09-2015](info): Table deleted: link_capacity
+[13:26:06:980737 15-09-2015](info): Table deleted: mp_fetch
+[13:26:06:985385 15-09-2015](info): Table deleted: mob_pred
+[13:26:06:990240 15-09-2015](info): Table deleted: user_mobility_information
+[13:26:06:990269 15-09-2015](info): All database connections are being closed...
+[13:26:07:134642 15-09-2015](info): Found MySQLdb correctly
+[13:26:07:134832 15-09-2015](info): Found numpy correctly
+[13:26:07:134978 15-09-2015](info): Found pykov correctly
+[13:26:07:135015 15-09-2015](info): Create multiple database connections
+[13:26:07:135047 15-09-2015](info): Connection 0 has been added to Connection_Collection MOBaaS Databases
+[13:26:07:135067 15-09-2015](info): Connection 1 has been added to Connection_Collection MOBaaS Databases
+[13:26:07:135085 15-09-2015](info): Connection 2 has been added to Connection_Collection MOBaaS Databases
+[13:26:07:135103 15-09-2015](info): Connection 3 has been added to Connection_Collection MOBaaS Databases
+[13:26:07:135124 15-09-2015](info): Connection 4 has been added to Connection_Collection MOBaaS Databases
+[13:26:07:141337 15-09-2015](info): [Connection_Collection MOBaaS Databases containing connections{0, 1, 2, 3, 4}] has been started
+[13:26:07:141669 15-09-2015](info): Connection 0 has been added to Connection_Collection MOBaaS Supplier Connections Client
+[13:26:07:141723 15-09-2015](info): A connection has been made: [Connection id: 0 address: ('localhost', 9658) ]
+[13:26:07:141751 15-09-2015](info): [Connection_Collection MOBaaS Supplier Connections Client containing connections{0}] has been started
+[13:26:07:141836 15-09-2015](critical): Error during binding and listening to server socket ''. Error 98: Address already in use
+[13:26:07:141863 15-09-2015](error): Shutting down server
+[13:26:07:141906 15-09-2015](critical): [Connection_Collection MOBaaS Consumer Connections Server containing connections{}] could not be started!
+[13:26:07:141926 15-09-2015](critical): Could not start server succesfully. Aborting...
+[13:26:07:141991 15-09-2015](info): Broadcasting close message: ENDCONVERSATION {"reason": "MOBaaS is being closed"}
+
+
+[13:26:07:142034 15-09-2015](info): Broadcasting close message: ENDCONVERSATION {"reason": "MOBaaS is being closed"}
+
+
+[13:26:07:142344 15-09-2015](info): All database connections are being closed...
+[13:26:07:142564 15-09-2015](info): The MOBaaS Consumer Connections Server server is being stopped
+[13:26:07:142586 15-09-2015](error): Tried to close the server, but the server was never correctly started!
+[13:26:07:142600 15-09-2015](info): All socket connections are being closed...
+[09:24:37:472191 16-09-2015](info): Found MySQLdb correctly
+[09:24:37:472440 16-09-2015](info): Found numpy correctly
+[09:24:37:472558 16-09-2015](info): Found pykov correctly
+[09:24:37:472587 16-09-2015](info): Create multiple database connections
+[09:24:37:472621 16-09-2015](info): Connection 0 has been added to Connection_Collection Setting up all tables
+[09:24:37:472658 16-09-2015](info): Connection 1 has been added to Connection_Collection Setting up all tables
+[09:24:37:472692 16-09-2015](info): Connection 2 has been added to Connection_Collection Setting up all tables
+[09:24:37:472712 16-09-2015](info): Connection 3 has been added to Connection_Collection Setting up all tables
+[09:24:37:472727 16-09-2015](info): Connection 4 has been added to Connection_Collection Setting up all tables
+[09:24:37:488111 16-09-2015](info): Succesfully started all db connections. Doing maintenance...
+[09:24:37:499687 16-09-2015](info): Table created: bp_fetch
+[09:24:37:508687 16-09-2015](info): Table created: band_pred
+[09:24:37:518504 16-09-2015](info): Table created: flow_data
+[09:24:37:526904 16-09-2015](info): Table created: link_capacity
+[09:24:37:535183 16-09-2015](info): Table created: mp_fetch
+[09:24:37:543753 16-09-2015](info): Table created: mob_pred
+[09:24:37:552217 16-09-2015](info): Table created: user_mobility_information
+[09:24:37:552248 16-09-2015](info): All database connections are being closed...
+./2_start_mobaas.sh: line 5: /var/log/webservice.log: Permission denied
+[09:24:37:588252 16-09-2015](info): Found MySQLdb correctly
+[09:24:37:588398 16-09-2015](info): Found numpy correctly
+[09:24:37:588528 16-09-2015](info): Found pykov correctly
+[09:24:37:588553 16-09-2015](info): Create multiple database connections
+[09:24:37:588572 16-09-2015](info): Connection 0 has been added to Connection_Collection Clearing all databases
+[09:24:37:588590 16-09-2015](info): Connection 1 has been added to Connection_Collection Clearing all databases
+[09:24:37:588606 16-09-2015](info): Connection 2 has been added to Connection_Collection Clearing all databases
+[09:24:37:588622 16-09-2015](info): Connection 3 has been added to Connection_Collection Clearing all databases
+[09:24:37:588637 16-09-2015](info): Connection 4 has been added to Connection_Collection Clearing all databases
+[09:24:37:601223 16-09-2015](info): Succesfully started all db connections. Doing maintenance...
+[09:24:37:607258 16-09-2015](info): Table deleted: bp_fetch
+[09:24:37:612275 16-09-2015](info): Table deleted: band_pred
+[09:24:37:617181 16-09-2015](info): Table deleted: flow_data
+[09:24:37:621845 16-09-2015](info): Table deleted: link_capacity
+[09:24:37:626834 16-09-2015](info): Table deleted: mp_fetch
+[09:24:37:631418 16-09-2015](info): Table deleted: mob_pred
+[09:24:37:636092 16-09-2015](info): Table deleted: user_mobility_information
+[09:24:37:636121 16-09-2015](info): All database connections are being closed...
+[09:24:37:790769 16-09-2015](info): Found MySQLdb correctly
+[09:24:37:790937 16-09-2015](info): Found numpy correctly
+[09:24:37:791038 16-09-2015](info): Found pykov correctly
+[09:24:37:791073 16-09-2015](info): Create multiple database connections
+[09:24:37:791096 16-09-2015](info): Connection 0 has been added to Connection_Collection MOBaaS Databases
+[09:24:37:791115 16-09-2015](info): Connection 1 has been added to Connection_Collection MOBaaS Databases
+[09:24:37:791132 16-09-2015](info): Connection 2 has been added to Connection_Collection MOBaaS Databases
+[09:24:37:791148 16-09-2015](info): Connection 3 has been added to Connection_Collection MOBaaS Databases
+[09:24:37:791163 16-09-2015](info): Connection 4 has been added to Connection_Collection MOBaaS Databases
+[09:24:37:796943 16-09-2015](info): [Connection_Collection MOBaaS Databases containing connections{0, 1, 2, 3, 4}] has been started
+[09:24:37:797376 16-09-2015](info): Connection 0 has been added to Connection_Collection MOBaaS Supplier Connections Client
+[09:24:37:797428 16-09-2015](info): A connection has been made: [Connection id: 0 address: ('localhost', 9658) ]
+[09:24:37:797464 16-09-2015](info): [Connection_Collection MOBaaS Supplier Connections Client containing connections{0}] has been started
+[09:24:37:797535 16-09-2015](critical): Error during binding and listening to server socket ''. Error 98: Address already in use
+[09:24:37:797556 16-09-2015](error): Shutting down server
+[09:24:37:797585 16-09-2015](critical): [Connection_Collection MOBaaS Consumer Connections Server containing connections{}] could not be started!
+[09:24:37:797601 16-09-2015](critical): Could not start server succesfully. Aborting...
+[09:24:37:797668 16-09-2015](info): Broadcasting close message: ENDCONVERSATION {"reason": "MOBaaS is being closed"}
+
+
+[09:24:37:797716 16-09-2015](info): Broadcasting close message: ENDCONVERSATION {"reason": "MOBaaS is being closed"}
+
+
+[09:24:37:797805 16-09-2015](info): All database connections are being closed...
+[09:24:37:798031 16-09-2015](info): The MOBaaS Consumer Connections Server server is being stopped
+[09:24:37:798052 16-09-2015](error): Tried to close the server, but the server was never correctly started!
+[09:24:37:798066 16-09-2015](info): All socket connections are being closed...
+./1_start_test_maas.sh: line 8:  5851 Terminated              python ./mobaas/demo_programmes/test_supplier.py
+mysql --user=root --password="mcn_MOBaaS" --execute="DROP DATABASE IF EXISTS  test_maas;";
+mysql --user=root --password="mcn_MOBaaS" --execute="CREATE DATABASE IF NOT EXISTS  test_maas;";
+PYTHONPATH=/home/ubuntu
+[09:28:58:655959 16-09-2015](info): Found MySQLdb correctly
+[09:28:58:656156 16-09-2015](info): Found numpy correctly
+[09:28:58:656290 16-09-2015](info): Found pykov correctly
+[09:28:58:656323 16-09-2015](info): Create multiple database connections
+[09:28:58:656356 16-09-2015](info): Connection 0 has been added to Connection_Collection Setting up all tables
+[09:28:58:656374 16-09-2015](info): Connection 1 has been added to Connection_Collection Setting up all tables
+[09:28:58:656389 16-09-2015](info): Connection 2 has been added to Connection_Collection Setting up all tables
+[09:28:58:656417 16-09-2015](info): Connection 3 has been added to Connection_Collection Setting up all tables
+[09:28:58:656432 16-09-2015](info): Connection 4 has been added to Connection_Collection Setting up all tables
+[09:28:58:674388 16-09-2015](info): Succesfully started all db connections. Doing maintenance...
+[09:28:58:687031 16-09-2015](info): Table created: bp_fetch
+[09:28:58:696755 16-09-2015](info): Table created: band_pred
+[09:28:58:706607 16-09-2015](info): Table created: flow_data
+[09:28:58:716343 16-09-2015](info): Table created: link_capacity
+[09:28:58:725232 16-09-2015](info): Table created: mp_fetch
+[09:28:58:734147 16-09-2015](info): Table created: mob_pred
+[09:28:58:743087 16-09-2015](info): Table created: user_mobility_information
+[09:28:58:743118 16-09-2015](info): All database connections are being closed...
+./2_start_mobaas.sh: line 5: /var/log/webservice.log: Permission denied
+[09:28:58:781690 16-09-2015](info): Found MySQLdb correctly
+[09:28:58:781876 16-09-2015](info): Found numpy correctly
+[09:28:58:782014 16-09-2015](info): Found pykov correctly
+[09:28:58:782055 16-09-2015](info): Create multiple database connections
+[09:28:58:782077 16-09-2015](info): Connection 0 has been added to Connection_Collection Clearing all databases
+[09:28:58:782107 16-09-2015](info): Connection 1 has been added to Connection_Collection Clearing all databases
+[09:28:58:782124 16-09-2015](info): Connection 2 has been added to Connection_Collection Clearing all databases
+[09:28:58:782139 16-09-2015](info): Connection 3 has been added to Connection_Collection Clearing all databases
+[09:28:58:782169 16-09-2015](info): Connection 4 has been added to Connection_Collection Clearing all databases
+[09:28:58:796025 16-09-2015](info): Succesfully started all db connections. Doing maintenance...
+[09:28:58:802191 16-09-2015](info): Table deleted: bp_fetch
+[09:28:58:808053 16-09-2015](info): Table deleted: band_pred
+[09:28:58:813679 16-09-2015](info): Table deleted: flow_data
+[09:28:58:818305 16-09-2015](info): Table deleted: link_capacity
+[09:28:58:823656 16-09-2015](info): Table deleted: mp_fetch
+[09:28:58:828790 16-09-2015](info): Table deleted: mob_pred
+[09:28:58:834578 16-09-2015](info): Table deleted: user_mobility_information
+[09:28:58:834606 16-09-2015](info): All database connections are being closed...
+./1_start_test_maas.sh: line 8: 24644 Terminated              python ./mobaas/demo_programmes/test_supplier.py
+mysql --user=root --password="mcn_MOBaaS" --execute="DROP DATABASE IF EXISTS  test_maas;";
+mysql --user=root --password="mcn_MOBaaS" --execute="CREATE DATABASE IF NOT EXISTS  test_maas;";
+PYTHONPATH=/home/ubuntu
+[09:46:10:764378 16-09-2015](info): Found MySQLdb correctly
+[09:46:10:764545 16-09-2015](info): Found numpy correctly
+[09:46:10:764747 16-09-2015](info): Found pykov correctly
+[09:46:10:764801 16-09-2015](info): Create multiple database connections
+[09:46:10:764833 16-09-2015](info): Connection 0 has been added to Connection_Collection Setting up all tables
+[09:46:10:764864 16-09-2015](info): Connection 1 has been added to Connection_Collection Setting up all tables
+[09:46:10:764892 16-09-2015](info): Connection 2 has been added to Connection_Collection Setting up all tables
+[09:46:10:764919 16-09-2015](info): Connection 3 has been added to Connection_Collection Setting up all tables
+[09:46:10:764946 16-09-2015](info): Connection 4 has been added to Connection_Collection Setting up all tables
+[09:46:10:787091 16-09-2015](info): Succesfully started all db connections. Doing maintenance...
+[09:46:10:799884 16-09-2015](info): Table created: bp_fetch
+[09:46:10:812356 16-09-2015](info): Table created: band_pred
+[09:46:10:824708 16-09-2015](info): Table created: flow_data
+[09:46:10:836175 16-09-2015](info): Table created: link_capacity
+[09:46:10:847742 16-09-2015](info): Table created: mp_fetch
+[09:46:10:858953 16-09-2015](info): Table created: mob_pred
+[09:46:10:868704 16-09-2015](info): Table created: user_mobility_information
+[09:46:10:868747 16-09-2015](info): All database connections are being closed...
+./2_start_mobaas.sh: line 5: /var/log/webservice.log: Permission denied
+[09:46:10:941075 16-09-2015](info): Found MySQLdb correctly
+[09:46:10:941223 16-09-2015](info): Found numpy correctly
+[09:46:10:941329 16-09-2015](info): Found pykov correctly
+[09:46:10:941354 16-09-2015](info): Create multiple database connections
+[09:46:10:941373 16-09-2015](info): Connection 0 has been added to Connection_Collection Clearing all databases
+[09:46:10:941407 16-09-2015](info): Connection 1 has been added to Connection_Collection Clearing all databases
+[09:46:10:941424 16-09-2015](info): Connection 2 has been added to Connection_Collection Clearing all databases
+[09:46:10:941438 16-09-2015](info): Connection 3 has been added to Connection_Collection Clearing all databases
+[09:46:10:941466 16-09-2015](info): Connection 4 has been added to Connection_Collection Clearing all databases
+[09:46:10:966514 16-09-2015](info): Succesfully started all db connections. Doing maintenance...
+[09:46:10:972135 16-09-2015](info): Table deleted: bp_fetch
+[09:46:10:977115 16-09-2015](info): Table deleted: band_pred
+[09:46:10:982494 16-09-2015](info): Table deleted: flow_data
+[09:46:10:987438 16-09-2015](info): Table deleted: link_capacity
+[09:46:10:992833 16-09-2015](info): Table deleted: mp_fetch
+[09:46:10:998669 16-09-2015](info): Table deleted: mob_pred
+[09:46:11:004088 16-09-2015](info): Table deleted: user_mobility_information
+[09:46:11:004115 16-09-2015](info): All database connections are being closed...
+./1_start_test_maas.sh: line 8: 25078 Terminated              python ./mobaas/demo_programmes/test_supplier.py
+mysql --user=root --password="mcn_MOBaaS" --execute="DROP DATABASE IF EXISTS  test_maas;";
+mysql --user=root --password="mcn_MOBaaS" --execute="CREATE DATABASE IF NOT EXISTS  test_maas;";
+PYTHONPATH=/home/ubuntu
+[09:50:45:219001 16-09-2015](info): Found MySQLdb correctly
+[09:50:45:219176 16-09-2015](info): Found numpy correctly
+[09:50:45:219282 16-09-2015](info): Found pykov correctly
+[09:50:45:219307 16-09-2015](info): Create multiple database connections
+[09:50:45:219326 16-09-2015](info): Connection 0 has been added to Connection_Collection Setting up all tables
+[09:50:45:219342 16-09-2015](info): Connection 1 has been added to Connection_Collection Setting up all tables
+[09:50:45:219356 16-09-2015](info): Connection 2 has been added to Connection_Collection Setting up all tables
+[09:50:45:219370 16-09-2015](info): Connection 3 has been added to Connection_Collection Setting up all tables
+[09:50:45:219383 16-09-2015](info): Connection 4 has been added to Connection_Collection Setting up all tables
+[09:50:45:231459 16-09-2015](info): Succesfully started all db connections. Doing maintenance...
+[09:50:45:243524 16-09-2015](info): Table created: bp_fetch
+[09:50:45:254341 16-09-2015](info): Table created: band_pred
+[09:50:45:264877 16-09-2015](info): Table created: flow_data
+[09:50:45:275005 16-09-2015](info): Table created: link_capacity
+[09:50:45:285726 16-09-2015](info): Table created: mp_fetch
+[09:50:45:296726 16-09-2015](info): Table created: mob_pred
+[09:50:45:307392 16-09-2015](info): Table created: user_mobility_information
+[09:50:45:307428 16-09-2015](info): All database connections are being closed...
+Fontconfig warning: ignoring UTF-8: not a valid region tag
+Fontconfig warning: ignoring UTF-8: not a valid region tag
+[09:50:46:442362 16-09-2015](info): Found MySQLdb correctly
+[09:50:46:442508 16-09-2015](info): Found numpy correctly
+[09:50:46:442621 16-09-2015](info): Found pykov correctly
+[09:50:46:442669 16-09-2015](info): Create multiple database connections
+[09:50:46:442703 16-09-2015](info): Connection 0 has been added to Connection_Collection MOBaaS Databases
+[09:50:46:442727 16-09-2015](info): Connection 1 has been added to Connection_Collection MOBaaS Databases
+[09:50:46:442745 16-09-2015](info): Connection 2 has been added to Connection_Collection MOBaaS Databases
+[09:50:46:442762 16-09-2015](info): Connection 3 has been added to Connection_Collection MOBaaS Databases
+[09:50:46:442778 16-09-2015](info): Connection 4 has been added to Connection_Collection MOBaaS Databases
+[09:50:46:449181 16-09-2015](info): [Connection_Collection MOBaaS Databases containing connections{0, 1, 2, 3, 4}] has been started
+[09:50:46:449497 16-09-2015](info): Connection 0 has been added to Connection_Collection MOBaaS Supplier Connections Client
+[09:50:46:449552 16-09-2015](info): A connection has been made: [Connection id: 0 address: ('localhost', 9658) ]
+[09:50:46:449575 16-09-2015](info): [Connection_Collection MOBaaS Supplier Connections Client containing connections{0}] has been started
+[09:50:46:449650 16-09-2015](info): [Connection_Collection MOBaaS Consumer Connections Server containing connections{}] has been started
+[09:50:46:449670 16-09-2015](info): Server started succesfully. Going to work!
+[10:03:34:809242 16-09-2015](info): Connection 0 has been added to Connection_Collection MOBaaS Consumer Connections Server
+[10:03:34:809357 16-09-2015](info): A connection has been accepted [Connection id: 0 address: ('127.0.0.1', 49085) ]
+[10:03:34:809980 16-09-2015](info): Received request {GET {"type": "request-mp-multi-user", "user_id": 0, "current_time": "17:10", "current_date": "Monday", "future_time_delta": 10}
+
+}
+[10:03:34:810038 16-09-2015](info): Using MP multi-user algorithm, iteration 0
+********************************************************************************
+Current time is:  17:10   &   Currer day is :  Monday
+********************************************************************************
+result:
+{(5963, 4984, '17:20'): [('4984', '1.0000')]}
+[10:03:34:965585 16-09-2015](info): answer_message before sending it:
+<mobaas.mobaas_protocol.message_objects.MPMultiUserAnswer instance at 0x7f661ed61200>
+[10:03:34:965727 16-09-2015](info): Execution time for this run (iteration 0) is : 0 , Second
+[10:03:38:674667 16-09-2015](info): Received request {ENDCONVERSATION {"reason": "Client is being closed"}
+
+}
+[10:03:38:674721 16-09-2015](info): Consumer Connection [Connection id: 0 address: ('127.0.0.1', 49085) ] is requested to end because: Client is being closed
+[10:03:44:966379 16-09-2015](info): Using MP multi-user algorithm, iteration 1
+********************************************************************************
+Current time is:  17:20   &   Currer day is :  Monday
+********************************************************************************
+result:
+{(5963, 4984, '17:30'): [('1679', '1.0000')]}
+[10:03:45:117895 16-09-2015](info): answer_message before sending it:
+<mobaas.mobaas_protocol.message_objects.MPMultiUserAnswer instance at 0x7f661eda6440>
+[10:03:45:118077 16-09-2015](info): Execution time for this run (iteration 1) is : 0 , Second
+[10:03:46:592069 16-09-2015](info): Connection 0 has been added to Connection_Collection MOBaaS Consumer Connections Server
+[10:03:46:592178 16-09-2015](info): A connection has been accepted [Connection id: 0 address: ('127.0.0.1', 49087) ]
+[10:03:46:592511 16-09-2015](info): Received request {GET {"type": "request-mp-multi-user", "user_id": 0, "current_time": "17:10", "current_date": "Monday", "future_time_delta": 10}
+
+}
+[10:03:46:592564 16-09-2015](info): Using MP multi-user algorithm, iteration 0
+********************************************************************************
+Current time is:  17:10   &   Currer day is :  Monday
+********************************************************************************
+result:
+{(5963, 4984, '17:20'): [('4984', '1.0000')]}
+[10:03:46:751662 16-09-2015](info): answer_message before sending it:
+<mobaas.mobaas_protocol.message_objects.MPMultiUserAnswer instance at 0x7f66233b7fc8>
+[10:03:46:751824 16-09-2015](info): Execution time for this run (iteration 0) is : 0 , Second
+[10:03:55:118594 16-09-2015](info): Using MP multi-user algorithm, iteration 2
+********************************************************************************
+Current time is:  17:30   &   Currer day is :  Monday
+********************************************************************************
+result:
+{(5963, 1679, '17:40'): [('1679', '1.0000')]}
+[10:03:55:264528 16-09-2015](info): answer_message before sending it:
+<mobaas.mobaas_protocol.message_objects.MPMultiUserAnswer instance at 0x7f661ed71320>
+[10:03:55:264676 16-09-2015](info): Execution time for this run (iteration 2) is : 0 , Second
+[10:03:56:708844 16-09-2015](info): Received request {ENDCONVERSATION {"reason": "Client is being closed"}
+
+}
+[10:03:56:708894 16-09-2015](info): Consumer Connection [Connection id: 0 address: ('127.0.0.1', 49087) ] is requested to end because: Client is being closed
+[10:03:56:752208 16-09-2015](info): Using MP multi-user algorithm, iteration 1
+********************************************************************************
+Current time is:  17:20   &   Currer day is :  Monday
+********************************************************************************
+result:
+{(5963, 4984, '17:30'): [('1679', '1.0000')]}
+[10:03:56:898556 16-09-2015](info): answer_message before sending it:
+<mobaas.mobaas_protocol.message_objects.MPMultiUserAnswer instance at 0x7f661ed4e098>
+[10:03:56:898671 16-09-2015](info): Execution time for this run (iteration 1) is : 0 , Second
+[10:04:05:265138 16-09-2015](info): Using MP multi-user algorithm, iteration 3
+********************************************************************************
+Current time is:  17:40   &   Currer day is :  Monday
+********************************************************************************
+result:
+{(5963, 1679, '17:50'): [('4984', '1.0000')]}
+[10:04:05:411838 16-09-2015](info): answer_message before sending it:
+<mobaas.mobaas_protocol.message_objects.MPMultiUserAnswer instance at 0x7f661ed73050>
+[10:04:05:411989 16-09-2015](info): Execution time for this run (iteration 3) is : 0 , Second
+[10:04:06:899029 16-09-2015](info): Using MP multi-user algorithm, iteration 2
+********************************************************************************
+Current time is:  17:30   &   Currer day is :  Monday
+********************************************************************************
+result:
+{(5963, 1679, '17:40'): [('1679', '1.0000')]}
+[10:04:07:043642 16-09-2015](info): answer_message before sending it:
+<mobaas.mobaas_protocol.message_objects.MPMultiUserAnswer instance at 0x7f661ed54170>
+[10:04:07:043769 16-09-2015](info): Execution time for this run (iteration 2) is : 0 , Second
+[10:04:15:412524 16-09-2015](info): Using MP multi-user algorithm, iteration 4
+********************************************************************************
+Current time is:  17:50   &   Currer day is :  Monday
+********************************************************************************
+result:
+{(5963, 4984, '18:00'): [('4984', '1.0000')]}
+[10:04:15:556935 16-09-2015](info): answer_message before sending it:
+<mobaas.mobaas_protocol.message_objects.MPMultiUserAnswer instance at 0x7f661ed7f050>
+[10:04:15:557049 16-09-2015](info): Execution time for this run (iteration 4) is : 0 , Second
+[10:04:17:044123 16-09-2015](info): Using MP multi-user algorithm, iteration 3
+********************************************************************************
+Current time is:  17:40   &   Currer day is :  Monday
+********************************************************************************
+result:
+{(5963, 1679, '17:50'): [('4984', '1.0000')]}
+[10:04:17:192223 16-09-2015](info): answer_message before sending it:
+<mobaas.mobaas_protocol.message_objects.MPMultiUserAnswer instance at 0x7f661ed51098>
+[10:04:17:192405 16-09-2015](info): Execution time for this run (iteration 3) is : 0 , Second
+[10:04:25:557464 16-09-2015](info): Using MP multi-user algorithm, iteration 5
+********************************************************************************
+Current time is:  18:00   &   Currer day is :  Monday
+********************************************************************************
+result:
+{(5963, 4984, '18:10'): [('4984', '1.0000')]}
+[10:04:25:705749 16-09-2015](info): answer_message before sending it:
+<mobaas.mobaas_protocol.message_objects.MPMultiUserAnswer instance at 0x7f661ed6d050>
+[10:04:25:705866 16-09-2015](info): Execution time for this run (iteration 5) is : 0 , Second
+[10:04:27:192789 16-09-2015](info): Using MP multi-user algorithm, iteration 4
+********************************************************************************
+Current time is:  17:50   &   Currer day is :  Monday
+********************************************************************************
+result:
+{(5963, 4984, '18:00'): [('4984', '1.0000')]}
+[10:04:27:332125 16-09-2015](info): answer_message before sending it:
+<mobaas.mobaas_protocol.message_objects.MPMultiUserAnswer instance at 0x7f661ed86170>
+[10:04:27:332235 16-09-2015](info): Execution time for this run (iteration 4) is : 0 , Second
+[10:04:35:706314 16-09-2015](info): Using MP multi-user algorithm, iteration 6
+********************************************************************************
+Current time is:  18:10   &   Currer day is :  Monday
+********************************************************************************
+result:
+{(5963, 4984, '18:20'): [('571', '1.0000')]}
+[10:04:35:853813 16-09-2015](info): answer_message before sending it:
+<mobaas.mobaas_protocol.message_objects.MPMultiUserAnswer instance at 0x7f661ed70050>
+[10:04:35:853978 16-09-2015](info): Execution time for this run (iteration 6) is : 0 , Second
+[10:04:37:332603 16-09-2015](info): Using MP multi-user algorithm, iteration 5
+********************************************************************************
+Current time is:  18:00   &   Currer day is :  Monday
+********************************************************************************
+result:
+{(5963, 4984, '18:10'): [('4984', '1.0000')]}
+[10:04:37:476575 16-09-2015](info): answer_message before sending it:
+<mobaas.mobaas_protocol.message_objects.MPMultiUserAnswer instance at 0x7f661ed85170>
+[10:04:37:476701 16-09-2015](info): Execution time for this run (iteration 5) is : 0 , Second
+[10:04:45:854374 16-09-2015](info): Using MP multi-user algorithm, iteration 7
+********************************************************************************
+Current time is:  18:20   &   Currer day is :  Monday
+********************************************************************************
+result:
+{(5963, 571, '18:30'): [('562', '1.0000')]}
+[10:04:46:001332 16-09-2015](info): answer_message before sending it:
+<mobaas.mobaas_protocol.message_objects.MPMultiUserAnswer instance at 0x7f661ed80050>
+[10:04:46:001450 16-09-2015](info): Execution time for this run (iteration 7) is : 0 , Second
+[10:04:47:477099 16-09-2015](info): Using MP multi-user algorithm, iteration 6
+********************************************************************************
+Current time is:  18:10   &   Currer day is :  Monday
+********************************************************************************
+result:
+{(5963, 4984, '18:20'): [('571', '1.0000')]}
+[10:04:47:624229 16-09-2015](info): answer_message before sending it:
+<mobaas.mobaas_protocol.message_objects.MPMultiUserAnswer instance at 0x7f661ed67170>
+[10:04:47:624406 16-09-2015](info): Execution time for this run (iteration 6) is : 0 , Second
+[10:04:56:001801 16-09-2015](info): Using MP multi-user algorithm, iteration 8
+********************************************************************************
+Current time is:  18:30   &   Currer day is :  Monday
+********************************************************************************
+result:
+{(5963, 562, '18:40'): [('562', '1.0000')]}
+[10:04:56:150756 16-09-2015](info): answer_message before sending it:
+Exception in thread Thread-16:
+Traceback (most recent call last):
+  File "/usr/lib/python2.7/threading.py", line 810, in __bootstrap_inner
+    self.run()
+  File "/usr/lib/python2.7/threading.py", line 1082, in run
+    self.function(*self.args, **self.kwargs)
+  File "/home/ubuntu/mobaas/frontend_support/handle_messages.py", line 135, in handle_incoming_mp_multi_user_request
+    for k in result.keys():
+AttributeError: 'NoneType' object has no attribute 'keys'
+
+Exception in thread Thread-18:
+Traceback (most recent call last):
+  File "/usr/lib/python2.7/threading.py", line 810, in __bootstrap_inner
+    self.run()
+  File "/usr/lib/python2.7/threading.py", line 1082, in run
+    self.function(*self.args, **self.kwargs)
+  File "/home/ubuntu/mobaas/frontend_support/handle_messages.py", line 135, in handle_incoming_mp_multi_user_request
+    for k in result.keys():
+AttributeError: 'NoneType' object has no attribute 'keys'
+
+mysql --user=root --password="mcn_MOBaaS" --execute="CREATE DATABASE IF NOT EXISTS  test_maas;";
+PYTHONPATH=/home/ubuntu
+[10:11:46:908184 16-09-2015](info): Found MySQLdb correctly
+[10:11:46:908331 16-09-2015](info): Found numpy correctly
+[10:11:46:908441 16-09-2015](info): Found pykov correctly
+[10:11:46:908466 16-09-2015](info): Create multiple database connections
+[10:11:46:908498 16-09-2015](info): Connection 0 has been added to Connection_Collection Setting up all tables
+[10:11:46:908514 16-09-2015](info): Connection 1 has been added to Connection_Collection Setting up all tables
+[10:11:46:908529 16-09-2015](info): Connection 2 has been added to Connection_Collection Setting up all tables
+[10:11:46:908557 16-09-2015](info): Connection 3 has been added to Connection_Collection Setting up all tables
+[10:11:46:908572 16-09-2015](info): Connection 4 has been added to Connection_Collection Setting up all tables
+[10:11:46:923932 16-09-2015](info): Succesfully started all db connections. Doing maintenance...
+[10:11:46:925134 16-09-2015](error): Table bp_fetch already exists!
+[10:11:46:925515 16-09-2015](error): Table band_pred already exists!
+[10:11:46:925943 16-09-2015](error): Table flow_data already exists!
+[10:11:46:926297 16-09-2015](error): Table link_capacity already exists!
+[10:11:46:926708 16-09-2015](error): Table mp_fetch already exists!
+[10:11:46:927041 16-09-2015](error): Table mob_pred already exists!
+[10:11:46:927384 16-09-2015](error): Table user_mobility_information already exists!
+[10:11:46:927405 16-09-2015](info): All database connections are being closed...
