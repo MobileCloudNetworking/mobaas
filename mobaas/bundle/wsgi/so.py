@@ -22,8 +22,11 @@ import os
 import threading
 
 from sdk.mcn import util
+from sm.so import service_orchestrator
+from sm.so.service_orchestrator import LOG
+from sm.so.service_orchestrator import BUNDLE_DIR
 
-HERE = os.environ['OPENSHIFT_REPO_DIR']
+HERE = os.environ['BUNDLE_DIR']
 
 
 def config_logger(log_level=logging.DEBUG):

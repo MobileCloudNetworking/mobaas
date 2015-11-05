@@ -80,6 +80,8 @@ application = occi_ext.Application(MyBackend())
 #
 if __name__ == '__main__':
     from wsgiref.simple_server import make_server
-    httpd = make_server('localhost', 8051, application)
+    # OpSV3 needs process to listen on a public interface, use 0.0.0.0
+    # no effect with OpSV2
+    httpd = make_server('0.0.0.0', 8080, application)
     # Wait for a single request, serve it and quit.
     httpd.serve_forever()

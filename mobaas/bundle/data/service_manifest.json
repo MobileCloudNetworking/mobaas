@@ -4,6 +4,6 @@
   "service_attributes": {
       "mcn.endpoint.mobaas": "immutable"
   },
-  "service_endpoint": "http://mob.cloudcomplab.ch:8888/mobaas/",
+  "service_endpoint": "http://mob.cloudcomplab.ch:8900/mobaas/",
   "depends_on": []
 }
